@@ -35,11 +35,9 @@ def setup_gcp():
     # Puxa as credenciais do Secrets do Streamlit de forma segura
     creds_dict = dict(st.secrets["gcp_service_account"])
     # Ajuste drástico para evitar o Erro "RefreshError (jwt_grant)" com chaves geradas em TOML:
-    # Se o Streamlit ler o "
-" literalmente como caracteres de barra e 'n', forçamos a virar quebra de linha.
-    if "\n" in creds_dict["private_key"]:
-        creds_dict["private_key"] = creds_dict["private_key"].replace("\n", "
-")
+    # Se o Streamlit ler o "\n" literalmente como caracteres de barra e 'n', forçamos a virar quebra de linha.
+    if "\\n" in creds_dict["private_key"]:
+        creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
     
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     gc = gspread.authorize(creds)
