@@ -103,6 +103,7 @@ ESTRUTURA_TABS = {
     "Risco_Medida_Proposta": ["Id_Risco_Med_Proposta", "Id_Risco_Med_Existente", "Medida Proposta", "Id_Probabilidade", "Id_Efeito", "Nível", "Classificação", "Imediata", "Responsável", "Data Início", "Data Final", "Status", "Porcentagem", "Data Execução"]
 }
 
+@st.cache_data(ttl=120)
 def load_tabela(nome):
     try:
         sh = gc.open_by_key(DB_SHEET_ID)
@@ -122,6 +123,7 @@ def save_tabela(nome, df):
     worksheet = sh.worksheet(nome)
     worksheet.clear()
     worksheet.update([df.columns.values.tolist()] + df.values.astype(str).tolist())
+    load_tabela.clear()
 
 def proximo_id(df, col_pk):
     if df.empty: return 1
