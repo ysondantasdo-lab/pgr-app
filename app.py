@@ -33,7 +33,14 @@ def setup_gcp():
         "https://www.googleapis.com/auth/drive"
     ]
     # Puxa as credenciais do Secrets do Streamlit de forma segura
-    creds_dict = st.secrets["gcp_service_account"]
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    # Ajuste drástico para evitar o Erro "RefreshError (jwt_grant)" com chaves geradas em TOML:
+    # Se o Streamlit ler o "
+" literalmente como caracteres de barra e 'n', forçamos a virar quebra de linha.
+    if "\n" in creds_dict["private_key"]:
+        creds_dict["private_key"] = creds_dict["private_key"].replace("\n", "
+")
+    
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     gc = gspread.authorize(creds)
     drive_service = build('drive', 'v3', credentials=creds)
