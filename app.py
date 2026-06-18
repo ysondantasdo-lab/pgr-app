@@ -167,59 +167,67 @@ if st.session_state["usuario_perfil"] == "Admin":
 def sincronizar_tabelas_entidades(is_initial=False):
     try:
         sh_dados = gc.open_by_key(DADOS_SHEET_ID)
-        worksheet_dados = sh_dados.get_worksheet(0) # Pega primeira aba
-        dados = worksheet_dados.get_all_records()
-        
-        if not dados:
-            return False, "Planilha DADOSTABELAS parece estar vazia."
-
-        df_excel = pd.DataFrame(dados)
-        df_excel.replace("", float("NaN"), inplace=True)
-        df_excel.ffill(inplace=True)
         
         df_sec = load_tabela("Secretaria")
         df_cargo = load_tabela("Cargo")
         df_risco = load_tabela("Riscos_Ambientais")
 
-        if is_initial and not df_sec.empty:
+        if is_initial and not df_sec.empty and not df_cargo.empty and len(df_cargo) > 0:
             return True, "Carga inicial já havia sido feita."
-
-        if "Nome do Órgão" in df_excel.columns:
-            orgaos = df_excel["Nome do Órgão"].dropna().unique()
-            df_sec = df_sec[df_sec["Nome do Órgão"].isin(orgaos)] 
             
-            for index, row in df_excel.drop_duplicates(subset=["Nome do Órgão"]).iterrows():
-                nome = row["Nome do Órgão"]
-                sigla = row.get("Sigla", "")
-                end = row.get("Endereço", "")
-                cnpj = row.get("CNPJ", "")
-                cnae = row.get("CNAE", "")
-                desc = row.get("Descrição CNAE", "")
-                grau = row.get("Grau de Risco", "")
-                grupo = row.get("Grupo de Risco", "")
+        tabelas_lidas = []
+        for ws in sh_dados.worksheets():
+            dados = ws.get_all_records()
+            if dados:
+                tabelas_lidas.append(pd.DataFrame(dados))
                 
-                if nome in df_sec["Nome do Órgão"].values:
-                    idx = df_sec[df_sec["Nome do Órgão"] == nome].index
-                    df_sec.loc[idx, ["Sigla", "Endereço", "CNPJ", "CNAE", "Descrição CNAE", "Grau de Risco", "Grupo de Risco"]] = [sigla, end, cnpj, cnae, desc, grau, grupo]
-                else:
-                    df_sec.loc[len(df_sec)] = [proximo_id(df_sec, "Id_Secretaria"), nome, sigla, end, cnpj, cnae, desc, grau, grupo]
-            save_tabela("Secretaria", df_sec)
+        if not tabelas_lidas:
+            return False, "Planilha DADOSTABELAS parece estar vazia."
 
-        if "Cargo" in df_excel.columns:
-            cargos = df_excel["Cargo"].dropna().unique()
-            df_cargo = df_cargo[df_cargo["Nome do Cargo"].isin(cargos)]
-            for cargo in cargos:
-                if cargo not in df_cargo["Nome do Cargo"].values:
-                    df_cargo.loc[len(df_cargo)] = [proximo_id(df_cargo, "Id_Cargo"), cargo]
-            save_tabela("Cargo", df_cargo)
+        for df_excel in tabelas_lidas:
+            df_excel.replace("", float("NaN"), inplace=True)
+            df_excel.ffill(inplace=True)
             
-        if "Nome Risco" in df_excel.columns:
-            riscos = df_excel["Nome Risco"].dropna().unique()
-            df_risco = df_risco[df_risco["Nome Risco"].isin(riscos)]
-            for risco in riscos:
-                if risco not in df_risco["Nome Risco"].values:
-                    df_risco.loc[len(df_risco)] = [proximo_id(df_risco, "Id_Risco"), risco]
-            save_tabela("Riscos_Ambientais", df_risco)
+            # --- Secretaria ---
+            if "Nome do Órgão" in df_excel.columns:
+                orgaos = df_excel["Nome do Órgão"].dropna().unique()
+                df_sec = df_sec[df_sec["Nome do Órgão"].isin(orgaos)] 
+                
+                for index, row in df_excel.drop_duplicates(subset=["Nome do Órgão"]).iterrows():
+                    nome = row["Nome do Órgão"]
+                    sigla = row.get("Sigla", "")
+                    end = row.get("Endereço", "")
+                    cnpj = row.get("CNPJ", "")
+                    cnae = row.get("CNAE", "")
+                    desc = row.get("Descrição CNAE", "")
+                    grau = row.get("Grau de Risco", "")
+                    grupo = row.get("Grupo de Risco", "")
+                    
+                    if nome in df_sec["Nome do Órgão"].values:
+                        idx = df_sec[df_sec["Nome do Órgão"] == nome].index
+                        df_sec.loc[idx, ["Sigla", "Endereço", "CNPJ", "CNAE", "Descrição CNAE", "Grau de Risco", "Grupo de Risco"]] = [sigla, end, cnpj, cnae, desc, grau, grupo]
+                    else:
+                        df_sec.loc[len(df_sec)] = [proximo_id(df_sec, "Id_Secretaria"), nome, sigla, end, cnpj, cnae, desc, grau, grupo]
+                save_tabela("Secretaria", df_sec)
+
+            # --- Cargo ---
+            col_cargo = "Nome do Cargo" if "Nome do Cargo" in df_excel.columns else ("Cargo" if "Cargo" in df_excel.columns else None)
+            if col_cargo:
+                cargos = df_excel[col_cargo].dropna().unique()
+                df_cargo = df_cargo[df_cargo["Nome do Cargo"].isin(cargos)]
+                for cargo in cargos:
+                    if cargo not in df_cargo["Nome do Cargo"].values:
+                        df_cargo.loc[len(df_cargo)] = [proximo_id(df_cargo, "Id_Cargo"), cargo]
+                save_tabela("Cargo", df_cargo)
+                
+            # --- Risco ---
+            if "Nome Risco" in df_excel.columns:
+                riscos = df_excel["Nome Risco"].dropna().unique()
+                df_risco = df_risco[df_risco["Nome Risco"].isin(riscos)]
+                for risco in riscos:
+                    if risco not in df_risco["Nome Risco"].values:
+                        df_risco.loc[len(df_risco)] = [proximo_id(df_risco, "Id_Risco"), risco]
+                save_tabela("Riscos_Ambientais", df_risco)
 
         return True, "Sincronização via GSheets concluída com sucesso."
     
