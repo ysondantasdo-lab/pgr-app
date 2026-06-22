@@ -276,105 +276,152 @@ def calcula_matriz(peso_p, peso_e):
 
 with abas[0]:
     st.header("📝 Formulário de Mapeamento do PGR (5 Faixas)")
-    with st.form("form_pgr"):
-        st.markdown("### FAIXA 1: Dados Iniciais e Organogramas")
-        df_sec_load = load_tabela("Secretaria")
-        df_cargo_load = load_tabela("Cargo")
-        
-        c1, c2 = st.columns(2)
-        op_sec = df_sec_load["Nome do Órgão"].tolist() if not df_sec_load.empty else []
-        sec_selecionada = c1.selectbox("Órgão / Secretaria", op_sec)
-        lotacao = c2.text_input("Lotação (Setor/Departamento)")
-        desc_fisica = st.text_input("Descrição Física do Ambiente")
-        
-        c3, c4 = st.columns(2)
-        op_cargo = df_cargo_load["Nome do Cargo"].tolist() if not df_cargo_load.empty else []
-        cargo_selecionado = c3.selectbox("Cargo Referência", op_cargo)
-        funcao_text = c4.text_input("Função Praticada")
-        
-        c5, c6 = st.columns(2)
-        qtd_m = c5.number_input("Quantidade Masc. (M)", min_value=0, step=1)
-        qtd_f = c6.number_input("Quantidade Fem. (F)", min_value=0, step=1)
-        st.info(f"**Total Automático Registrado:** {qtd_m + qtd_f}")
-        
-        st.markdown("### FAIXA 2: Identificação do Risco")
-        desc_atv = st.text_area("Descrição da Atividade")
-        df_risco_load = load_tabela("Riscos_Ambientais")
-        op_risco = df_risco_load["Nome Risco"].tolist() if not df_risco_load.empty else []
-        risco_selecionado = st.selectbox("Risco Ambiental", op_risco)
-        
-        c7, c8 = st.columns(2)
-        fator_risco = c7.text_input("Fator de Risco")
-        fonte_geradora = c8.text_input("Fonte Geradora")
-        aval_quant = c7.text_input("Avaliação Quantitativa")
-        danos = c8.text_input("Danos Possíveis à Saúde")
-        
-        df_exp = load_tabela("Tipo_Exposicao")
-        op_exp = df_exp["Nome Exposição"].tolist() if not df_exp.empty else []
-        expo_sel = st.selectbox("Tipo de Exposição", op_exp)
-        
-        st.markdown("### FAIXA 3: Avaliação de Risco Atual (Com medidas existentes)")
-        med_exist = st.text_area("Descreva a Medida Existente")
-        c9, c10 = st.columns(2)
-        epi_eficaz = c9.selectbox("EPI Eficaz?", ["Sim", "Não"])
-        epc_eficaz = c10.selectbox("EPC Eficaz?", ["Sim", "Não"])
-        
-        df_prob = load_tabela("Probabilidade")
-        df_efeito = load_tabela("Efeito")
-        
-        c11, c12 = st.columns(2)
-        op_prb = [f"{row['Peso Probabilidade']} - {row['Nome Probabilidade']}" for _, row in df_prob.iterrows()]
-        prob_atual_sel = c11.selectbox("Probabilidade Atual", op_prb)
-        peso_p_atual = int(str(prob_atual_sel).split(" - ")[0])
-        
-        op_ef = [f"{row['Peso Efeito']} - {row['Nome Efeito']}" for _, row in df_efeito.iterrows()]
-        efeito_atual_sel = c12.selectbox("Efeito (Severidade) Atual", op_ef)
-        peso_e_atual = int(str(efeito_atual_sel).split(" - ")[0])
-        
-        val_x_atual, niv_atual, class_atual, _ = calcula_matriz(peso_p_atual, peso_e_atual)
-        st.warning(f"**Cálculo Automático Matriz Atual:** Valor {val_x_atual} -> Nível '{niv_atual}' / Classificação '{class_atual}'")
-        
-        st.markdown("### FAIXA 4: Plano de Ação (Medidas Propostas)")
-        med_prop = st.text_area("Descreva as Medidas Propostas")
-        df_tm_prop = load_tabela("Tipo_Medida_Proposta")
-        op_tmp = df_tm_prop["Nome Tipo Medida Proposta"].tolist() if not df_tm_prop.empty else []
-        tmp_sel = st.selectbox("Classificação da Medida Proposta", op_tmp)
-        
-        c13, c14 = st.columns(2)
-        prob_prop_sel = c13.selectbox("Probabilidade Esperada (Proposta)", op_prb)
-        efeito_prop_sel = c14.selectbox("Efeito Esperado (Proposta)", op_ef)
-        peso_p_prop = int(str(prob_prop_sel).split(" - ")[0])
-        peso_e_prop = int(str(efeito_prop_sel).split(" - ")[0])
-        
-        val_x_prop, niv_prop, class_prop, imediata_prop = calcula_matriz(peso_p_prop, peso_e_prop)
-        st.success(f"**Matriz Proposta:** Valor {val_x_prop} -> Nível '{niv_prop}' / Classificação '{class_prop}'")
-        
-        st.markdown("### FAIXA 5: Acompanhamento de Execução")
-        st.info(f"👉 **Imediata (Preenchimento Automático):** {imediata_prop}")
-        c15, c16 = st.columns(2)
-        resp_acao = c15.text_input("Responsável Técnico pela Ação")
-        porc_exec = c16.number_input("Concluído (%)", min_value=0, max_value=100)
-        c17, c18, c19 = st.columns(3)
-        dt_ini = c17.date_input("Dada Inicial")
-        dt_fim = c18.date_input("Data Limite (Final)")
-        dt_exec = c19.date_input("Data de Execução Tática", value=None)
-        status_acao = st.selectbox("Status", ["Não Iniciado", "Em Andamento", "Atrasado", "Concluído"])
-        
-        # SALVAMENTO EM BANCO
-        btn_salvar = st.form_submit_button("✅ Salvar Cadastro Múltiplo no Pandas")
-        if btn_salvar:
+    
+    if "lista_riscos" not in st.session_state:
+        st.session_state["lista_riscos"] = []
+    if "fk" not in st.session_state:
+        st.session_state["fk"] = 0
+
+    st.markdown("### FAIXA 1: Dados Iniciais e Organogramas")
+    df_sec_load = load_tabela("Secretaria")
+    df_cargo_load = load_tabela("Cargo")
+    
+    c1, c2 = st.columns(2)
+    op_sec = df_sec_load["Nome do Órgão"].tolist() if not df_sec_load.empty else []
+    sec_selecionada = c1.selectbox("Órgão / Secretaria", op_sec)
+    lotacao = c2.text_input("Lotação (Setor/Departamento)")
+    desc_fisica = st.text_input("Descrição Física do Ambiente")
+    
+    c3, c4 = st.columns(2)
+    op_cargo = df_cargo_load["Nome do Cargo"].tolist() if not df_cargo_load.empty else []
+    cargo_selecionado = c3.selectbox("Cargo Referência", op_cargo)
+    funcao_text = c4.text_input("Função Praticada")
+    
+    c5, c6 = st.columns(2)
+    qtd_m = c5.number_input("Quantidade Masc. (M)", min_value=0, step=1)
+    qtd_f = c6.number_input("Quantidade Fem. (F)", min_value=0, step=1)
+    st.info(f"**Total Automático Registrado:** {qtd_m + qtd_f}")
+    
+    desc_atv = st.text_area("Descrição Geral da Atividade (Função)")
+
+    # ------------------ RISCOS JÁ ADICIONADOS ------------------
+    if len(st.session_state["lista_riscos"]) > 0:
+        st.markdown("### Riscos Adicionados para Esta Função")
+        df_show = pd.DataFrame(st.session_state["lista_riscos"])
+        cols_show = ["risco", "fator", "medida_existente", "medida_proposta"]
+        st.dataframe(df_show[cols_show] if len(df_show.columns) >= 4 else df_show, use_container_width=True)
+
+    # ------------------ ENTRADA DO NOVO RISCO ------------------
+    st.markdown("---")
+    st.markdown("#### ADICIONAR NOVO RISCO À FUNÇÃO")
+    fk = st.session_state["fk"]
+
+    st.markdown("##### FAIXA 2: Identificação do Risco")
+    df_risco_load = load_tabela("Riscos_Ambientais")
+    op_risco = df_risco_load["Nome Risco"].tolist() if not df_risco_load.empty else []
+    risco_selecionado = st.selectbox("Risco Ambiental", op_risco, key=f"risco_{fk}")
+    
+    c7, c8 = st.columns(2)
+    fator_risco = c7.text_input("Fator de Risco", key=f"fator_{fk}")
+    fonte_geradora = c8.text_input("Fonte Geradora", key=f"fonte_{fk}")
+    aval_quant = c7.text_input("Avaliação Quantitativa", key=f"aval_{fk}")
+    danos = c8.text_input("Danos Possíveis à Saúde", key=f"danos_{fk}")
+    
+    df_exp = load_tabela("Tipo_Exposicao")
+    op_exp = df_exp["Nome Exposição"].tolist() if not df_exp.empty else []
+    expo_sel = st.selectbox("Tipo de Exposição", op_exp, key=f"expo_{fk}")
+    
+    st.markdown("##### FAIXA 3: Avaliação de Risco Atual (Com medidas existentes)")
+    med_exist = st.text_area("Descreva a Medida Existente", key=f"me_{fk}")
+    c9, c10 = st.columns(2)
+    epi_eficaz = c9.selectbox("EPI Eficaz?", ["Sim", "Não"], key=f"epi_{fk}")
+    epc_eficaz = c10.selectbox("EPC Eficaz?", ["Sim", "Não"], key=f"epc_{fk}")
+    
+    df_prob = load_tabela("Probabilidade")
+    df_efeito = load_tabela("Efeito")
+    
+    c11, c12 = st.columns(2)
+    op_prb = [f"{row['Peso Probabilidade']} - {row['Nome Probabilidade']}" for _, row in df_prob.iterrows()]
+    prob_atual_sel = c11.selectbox("Probabilidade Atual", op_prb, key=f"pa_{fk}")
+    peso_p_atual = int(str(prob_atual_sel).split(" - ")[0])
+    
+    op_ef = [f"{row['Peso Efeito']} - {row['Nome Efeito']}" for _, row in df_efeito.iterrows()]
+    efeito_atual_sel = c12.selectbox("Efeito (Severidade) Atual", op_ef, key=f"ea_{fk}")
+    peso_e_atual = int(str(efeito_atual_sel).split(" - ")[0])
+    
+    val_x_atual, niv_atual, class_atual, _ = calcula_matriz(peso_p_atual, peso_e_atual)
+    st.warning(f"**Cálculo Automático Matriz Atual:** Valor {val_x_atual} -> Nível '{niv_atual}' / Classificação '{class_atual}'")
+    
+    st.markdown("##### FAIXA 4: Plano de Ação (Medidas Propostas)")
+    med_prop = st.text_area("Descreva as Medidas Propostas", key=f"mp_{fk}")
+    df_tm_prop = load_tabela("Tipo_Medida_Proposta")
+    op_tmp = df_tm_prop["Nome Tipo Medida Proposta"].tolist() if not df_tm_prop.empty else []
+    tmp_sel = st.selectbox("Classificação da Medida Proposta", op_tmp, key=f"tmp_{fk}")
+    
+    c13, c14 = st.columns(2)
+    prob_prop_sel = c13.selectbox("Probabilidade Esperada (Proposta)", op_prb, key=f"pp_{fk}")
+    efeito_prop_sel = c14.selectbox("Efeito Esperado (Proposta)", op_ef, key=f"ep_{fk}")
+    peso_p_prop = int(str(prob_prop_sel).split(" - ")[0])
+    peso_e_prop = int(str(efeito_prop_sel).split(" - ")[0])
+    
+    val_x_prop, niv_prop, class_prop, imediata_prop = calcula_matriz(peso_p_prop, peso_e_prop)
+    st.success(f"**Matriz Proposta:** Valor {val_x_prop} -> Nível '{niv_prop}' / Classificação '{class_prop}'")
+    
+    st.markdown("##### FAIXA 5: Acompanhamento de Execução")
+    st.info(f"👉 **Imediata (Preenchimento Automático):** {imediata_prop}")
+    c15, c16 = st.columns(2)
+    resp_acao = c15.text_input("Responsável Técnico pela Ação", key=f"resp_{fk}")
+    porc_exec = c16.number_input("Concluído (%)", min_value=0, max_value=100, key=f"porc_{fk}")
+    c17, c18, c19 = st.columns(3)
+    dt_ini = c17.date_input("Dada Inicial", key=f"dti_{fk}")
+    dt_fim = c18.date_input("Data Limite (Final)", key=f"dtf_{fk}")
+    dt_exec = c19.date_input("Data de Execução Tática", value=None, key=f"dte_{fk}")
+    status_acao = st.selectbox("Status", ["Não Iniciado", "Em Andamento", "Atrasado", "Concluído"], key=f"st_{fk}")
+    
+    # BOTÃO PARA ADICIONAR RISCO
+    if st.button("➕ Adicionar Este Risco", use_container_width=True):
+        novo_risco = {
+            "risco": risco_selecionado,
+            "fator": fator_risco,
+            "fonte": fonte_geradora,
+            "aval": aval_quant,
+            "danos": danos,
+            "expo": expo_sel,
+            "medida_existente": med_exist,
+            "epi": epi_eficaz,
+            "epc": epc_eficaz,
+            "prob_atual": prob_atual_sel,
+            "efeito_atual": efeito_atual_sel,
+            "val_x_atual": val_x_atual,
+            "class_atual": class_atual,
+            "medida_proposta": med_prop,
+            "tmp_sel": tmp_sel,
+            "prob_prop": prob_prop_sel,
+            "efeito_prop": efeito_prop_sel,
+            "val_x_prop": val_x_prop,
+            "class_prop": class_prop,
+            "imediata": imediata_prop,
+            "resp_acao": resp_acao,
+            "porc_exec": porc_exec,
+            "dt_ini": str(dt_ini),
+            "dt_fim": str(dt_fim),
+            "dt_exec": str(dt_exec) if dt_exec else "",
+            "status_acao": status_acao
+        }
+        st.session_state["lista_riscos"].append(novo_risco)
+        st.session_state["fk"] += 1
+        st.rerun()
+
+    st.markdown("---")
+
+    # SALVAMENTO EM BANCO
+    if st.button("✅ Salvar Cadastro Geral na Nuvem (Função + Riscos)"):
+        if len(st.session_state["lista_riscos"]) == 0:
+            st.error("Adicione pelo menos um risco antes de salvar!")
+        else:
             try:
-                # Recupera IDs estrangeiros
                 id_sec = df_sec_load[df_sec_load["Nome do Órgão"] == sec_selecionada].iloc[0]["Id_Secretaria"]
                 id_cargo = df_cargo_load[df_cargo_load["Nome do Cargo"] == cargo_selecionado].iloc[0]["Id_Cargo"]
-                id_risco = df_risco_load[df_risco_load["Nome Risco"] == risco_selecionado].iloc[0]["Id_Risco"]
-                id_expo = df_exp[df_exp["Nome Exposição"] == expo_sel].iloc[0]["Id_Exposição"]
-                
-                id_prob_at = df_prob[df_prob["Peso Probabilidade"] == peso_p_atual].iloc[0]["Id_Probabilidade"]
-                id_ef_at = df_efeito[df_efeito["Peso Efeito"] == peso_e_atual].iloc[0]["Id_Efeito"]
-                
-                id_prob_pr = df_prob[df_prob["Peso Probabilidade"] == peso_p_prop].iloc[0]["Id_Probabilidade"]
-                id_ef_pr = df_efeito[df_efeito["Peso Efeito"] == peso_e_prop].iloc[0]["Id_Efeito"]
                 
                 # 1. Sec_Lotacao
                 df_sl = load_tabela("Secretaria_Lotacao")
@@ -388,25 +435,41 @@ with abas[0]:
                 df_cf.loc[len(df_cf)] = [id_cf, id_sl, id_cargo, funcao_text, desc_atv, qtd_m, qtd_f, qtd_m+qtd_f]
                 save_tabela("Cargo_Funcao", df_cf)
                 
-                # 3. Lotacao_Risco
+                # Loop Riscos
                 df_lr = load_tabela("Lotacao_Risco")
-                id_lr = proximo_id(df_lr, "Id_Lotação_Risco")
-                df_lr.loc[len(df_lr)] = [id_lr, id_sl, id_cf, id_risco, fator_risco, fonte_geradora, aval_quant, danos, id_expo]
-                save_tabela("Lotacao_Risco", df_lr)
-                
-                # 4. Medida Existente
                 df_me = load_tabela("Risco_Medida_Existente")
-                id_me = proximo_id(df_me, "Id_Risco_Med_Existente")
-                df_me.loc[len(df_me)] = [id_me, id_lr, med_exist, epi_eficaz, epc_eficaz, id_prob_at, id_ef_at, val_x_atual, class_atual]
-                save_tabela("Risco_Medida_Existente", df_me)
-                
-                # 5. Medida Proposta
                 df_mp = load_tabela("Risco_Medida_Proposta")
-                id_mp = proximo_id(df_mp, "Id_Risco_Med_Proposta")
-                df_mp.loc[len(df_mp)] = [id_mp, id_me, med_prop, id_prob_pr, id_ef_pr, val_x_prop, class_prop, imediata_prop, resp_acao, dt_ini, dt_fim, status_acao, porc_exec, dt_exec]
+
+                for ri in st.session_state["lista_riscos"]:
+                    id_risco = df_risco_load[df_risco_load["Nome Risco"] == ri["risco"]].iloc[0]["Id_Risco"]
+                    id_expo = df_exp[df_exp["Nome Exposição"] == ri["expo"]].iloc[0]["Id_Exposição"]
+                    
+                    p_atual_peso = int(str(ri["prob_atual"]).split(" - ")[0])
+                    e_atual_peso = int(str(ri["efeito_atual"]).split(" - ")[0])
+                    p_prop_peso = int(str(ri["prob_prop"]).split(" - ")[0])
+                    e_prop_peso = int(str(ri["efeito_prop"]).split(" - ")[0])
+
+                    id_prob_at = df_prob[df_prob["Peso Probabilidade"] == p_atual_peso].iloc[0]["Id_Probabilidade"]
+                    id_ef_at = df_efeito[df_efeito["Peso Efeito"] == e_atual_peso].iloc[0]["Id_Efeito"]
+                    id_prob_pr = df_prob[df_prob["Peso Probabilidade"] == p_prop_peso].iloc[0]["Id_Probabilidade"]
+                    id_ef_pr = df_efeito[df_efeito["Peso Efeito"] == e_prop_peso].iloc[0]["Id_Efeito"]
+                    
+                    id_lr = proximo_id(df_lr, "Id_Lotação_Risco")
+                    df_lr.loc[len(df_lr)] = [id_lr, id_sl, id_cf, id_risco, ri["fator"], ri["fonte"], ri["aval"], ri["danos"], id_expo]
+                    
+                    id_me = proximo_id(df_me, "Id_Risco_Med_Existente")
+                    df_me.loc[len(df_me)] = [id_me, id_lr, ri["medida_existente"], ri["epi"], ri["epc"], id_prob_at, id_ef_at, ri["val_x_atual"], ri["class_atual"]]
+                    
+                    id_mp = proximo_id(df_mp, "Id_Risco_Med_Proposta")
+                    df_mp.loc[len(df_mp)] = [id_mp, id_me, ri["medida_proposta"], id_prob_pr, id_ef_pr, ri["val_x_prop"], ri["class_prop"], ri["imediata"], ri["resp_acao"], ri["dt_ini"], ri["dt_fim"], ri["status_acao"], ri["porc_exec"], ri["dt_exec"]]
+
+                save_tabela("Lotacao_Risco", df_lr)
+                save_tabela("Risco_Medida_Existente", df_me)
                 save_tabela("Risco_Medida_Proposta", df_mp)
                 
+                st.session_state["lista_riscos"] = []
                 st.success("Dados encadeados salvos com sucesso no Google Drive.")
+                st.rerun()
             except Exception as ex:
                 st.error(f"Erro ao salvar relações: {ex}")
 
@@ -421,32 +484,40 @@ with abas[1]:
         df2 = load_tabela("Secretaria_Lotacao").rename(columns={"Id_Sec_Lotação": "id_sl", "Id_Secretaria": "id_sec"})
         df3 = load_tabela("Cargo_Funcao").rename(columns={"Id_Cargo_Func": "id_cf", "Id_Sec_Lotação": "id_sl", "Id_Cargo": "id_c"})
         df4 = load_tabela("Cargo").rename(columns={"Id_Cargo": "id_c"})
+        df_lr = load_tabela("Lotacao_Risco").rename(columns={"Id_Lotação_Risco": "id_lr", "Id_Cargo_Func": "id_cf", "Id_Risco": "id_risco"})
+        df_risco = load_tabela("Riscos_Ambientais").rename(columns={"Id_Risco": "id_risco"})
+        df_me = load_tabela("Risco_Medida_Existente").rename(columns={"Id_Risco_Med_Existente": "id_me", "Id_Lotação_Risco": "id_lr"})
+        df_mp = load_tabela("Risco_Medida_Proposta").rename(columns={"Id_Risco_Med_Proposta": "id_mp", "Id_Risco_Med_Existente": "id_me"})
         
-        m_sec_sl = pd.merge(df1, df2, on="id_sec")
-        m_sl_cf = pd.merge(m_sec_sl, df3, on="id_sl")
-        view_flat = pd.merge(m_sl_cf, df4, on="id_c")
+        m_sec_sl = pd.merge(df1, df2, on="id_sec", how="left")
+        m_sl_cf = pd.merge(m_sec_sl, df3, on="id_sl", how="left")
+        m_cf_carg = pd.merge(m_sl_cf, df4, on="id_c", how="left")
+        
+        m_c_lr = pd.merge(m_cf_carg, df_lr, on="id_cf", how="left")
+        m_lr_ri = pd.merge(m_c_lr, df_risco, on="id_risco", how="left")
+        
+        m_ri_me = pd.merge(m_lr_ri, df_me, on="id_lr", how="left")
+        view_flat = pd.merge(m_ri_me, df_mp, on="id_me", how="left")
         
         c01, c02, c03 = st.columns(3)
-        op_f_orgao = ["Todos"] + list(view_flat["Nome do Órgão"].unique())
+        op_f_orgao = ["Todos"] + list(view_flat["Nome do Órgão"].dropna().unique())
         f_o = c01.selectbox("Filtro: Órgão (Secretaria)", op_f_orgao)
         
-        op_f_carg = ["Todos"] + list(view_flat["Nome do Cargo"].unique())
+        op_f_carg = ["Todos"] + list(view_flat["Nome do Cargo"].dropna().unique())
         f_c = c02.selectbox("Filtro: Cargo", op_f_carg)
         
-        op_f_fun = ["Todos"] + list(view_flat["Função"].unique())
+        op_f_fun = ["Todos"] + list(view_flat["Função"].dropna().unique())
         f_f = c03.selectbox("Filtro: Função Executada", op_f_fun)
         
-        # Filtro cumulativo dinamico
         filtered_view = view_flat.copy()
         if f_o != "Todos": filtered_view = filtered_view[filtered_view["Nome do Órgão"] == f_o]
         if f_c != "Todos": filtered_view = filtered_view[filtered_view["Nome do Cargo"] == f_c]
         if f_f != "Todos": filtered_view = filtered_view[filtered_view["Função"] == f_f]
         
         st.dataframe(filtered_view, use_container_width=True)
-        
         st.info("💡 As atualizações afetam diretamente as seleções mostradas aqui.")
-    except Exception:
-        st.warning("Banco de dados insuficiente para montagem da visualização. Por favor cadastre registros na Faixa 1 a 5.")
+    except Exception as e:
+        st.warning(f"Banco de dados insuficiente para montagem da visualização. Detalhe: {e}")
 
 # ==============================================================================
 # ABA 3: RELATÓRIO DO PGR E MÓDULO ODT
