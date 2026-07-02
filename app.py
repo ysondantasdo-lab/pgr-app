@@ -318,19 +318,19 @@ with abas[0]:
     qtd_m = c5.number_input("Quantidade Masc. (M)", min_value=0, step=1)
     qtd_f = c6.number_input("Quantidade Fem. (F)", min_value=0, step=1)
     st.info(f"**Total Automático Registrado:** {qtd_m + qtd_f}")
-    
     desc_atv = st.text_area("Descrição Geral da Atividade (Função)")
-        if "ia_sugestoes" not in st.session_state:
-            st.session_state["ia_sugestoes"] = []
+
+    if "ia_sugestoes" not in st.session_state:
+        st.session_state["ia_sugestoes"] = []
 
     if st.button("🪄 Sugerir Riscos com IA (Gemini)", use_container_width=True):
-        if not desc_atv or not cargo_selecionada:
+        if not desc_atv or not cargo_selecionado:
             st.error("Por favor, preencha o Cargo e a Descrição da Atividade para a IA analisar.")
         else:
             with st.spinner("O Gemini está analisando o ambiente de trabalho..."):
                 try:
                     client = genai.Client(api_key=st.secrets["auth"]["GEMINI_API_KEY"])
-                    prompt = f"Atue como um Engenheiro de Segurança do Trabalho Sênior. Analise o cargo '{cargo_selecionada}' que realiza a atividade: '{desc_atv}'. Gere uma lista de riscos ambientais previsíveis seguindo as diretrizes da NR-01."
+                    prompt = f"Atue como um Engenheiro de Segurança do Trabalho Sênior. Analise o cargo '{cargo_selecionado}' que realiza a atividade: '{desc_atv}'. Gere uma lista de riscos ambientais previsíveis seguindo as diretrizes da NR-01."
                     response = client.models.generate_content(
                         model='gemini-2.5-flash',
                         contents=prompt,
@@ -355,6 +355,8 @@ with abas[0]:
                     st.session_state[f"danos_{fk}"] = item_ia.danos_saude
                     st.session_state[f"mp_{fk}"] = item_ia.medida_proposta
                     st.rerun()
+    
+    
 
     # ------------------ RISCOS JÁ ADICIONADOS ------------------
     if len(st.session_state["lista_riscos"]) > 0:
