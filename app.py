@@ -4,6 +4,9 @@ import gspread
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+from google import genai
+from pydantic import BaseModel, Field
+from typing import List
 import os
 import datetime
 import subprocess
@@ -23,6 +26,17 @@ import traceback
 # Configurações de layout
 st.set_page_config(page_title="PGR Dinâmico em Nuvem", layout="wide")
 
+# Estrutura de dados para a Inteligência Artificial do Gemini
+class RiscoEstruturado(BaseModel):
+    fator_risco: str = Field(description="Ex: Ruído contínuo, Poeira de madeira, Calor extremo")
+    fonte_geradora: str = Field(description="Ex: Operação de serra circular, Trabalho ao sol")
+    danos_saude: str = Field(description="Ex: Perda auditiva, irritação respiratória, desidratação")
+    medida_proposta: str = Field(description="Ação sugerida para mitigar ou eliminate este risco específico")
+    tipo_medida: str = Field(description="Deve ser exatamente um destes: EPC, EPI, Administrativa/Organizacional ou Médica")
+
+class SugestaoPGR(BaseModel):
+    riscos: List[RiscoEstruturado]
+
 # ------------------------------------------------------------------------------
 # 1. SEGURANÇA E INICIALIZAÇÃO VIA STREAMLIT SECRETS E GOOGLE CLOUD
 # ------------------------------------------------------------------------------
@@ -32,9 +46,7 @@ def setup_gcp():
         "https://googleapis.com",
         "https://googleapis.com"
     ]
-    # Puxa as credenciais do Secrets do Streamlit de forma segura
     creds_dict = dict(st.secrets["gcp_service_account"])
-    # Ajuste drástico para evitar o Erro "RefreshError (jwt_grant)" com chaves geradas in TOML:
     if "\\n" in creds_dict["private_key"]:
         creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
     
@@ -129,7 +141,6 @@ def proximo_id(df, col_pk):
     df[col_pk] = pd.to_numeric(df[col_pk], errors='coerce').fillna(0)
     return int(df[col_pk].max()) + 1
 
-# Inicializa as tabelas basicas se vazias
 def preencher_tabelas_estaticas():
     df_prob = load_tabela("Probabilidade")
     if df_prob.empty:
@@ -159,7 +170,6 @@ def preencher_tabelas_estaticas():
 
 if st.session_state["usuario_perfil"] == "Admin":
     preencher_tabelas_estaticas()
-
 # ------------------------------------------------------------------------------
 # 3. SINCRONIZAÇÃO VIA GOOGLE SHEETS E EXCEL MIGRADO
 # ------------------------------------------------------------------------------
@@ -193,7 +203,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
                 df_sec = df_sec[df_sec["Nome do Órgão"].isin(orgaos)] 
                 
                 for index, row in df_excel.drop_duplicates(subset=["Nome do Órgão"]).iterrows():
-                    name = row["Nome do Órgão"]
+                    nome = row["Nome do Órgão"]
                     sigla = row.get("Sigla", "")
                     end = row.get("Endereço", "")
                     cnpj = row.get("CNPJ", "")
@@ -202,11 +212,11 @@ def sincronizar_tabelas_entidades(is_initial=False):
                     grau = row.get("Grau de Risco", "")
                     grupo = row.get("Grupo de Risco", "")
                     
-                    if name in df_sec["Nome do Órgão"].values:
-                        idx = df_sec[df_sec["Nome do Órgão"] == name].index
+                    if nome in df_sec["Nome do Órgão"].values:
+                        idx = df_sec[df_sec["Nome do Órgão"] == nome].index
                         df_sec.loc[idx, ["Sigla", "Endereço", "CNPJ", "CNAE", "Descrição CNAE", "Grau de Risco", "Grupo de Risco"]] = [sigla, end, cnpj, cnae, desc, grau, grupo]
                     else:
-                        df_sec.loc[len(df_sec)] = [proximo_id(df_sec, "Id_Secretaria"), name, sigla, end, cnpj, cnae, desc, grau, grupo]
+                        df_sec.loc[len(df_sec)] = [proximo_id(df_sec, "Id_Secretaria"), nome, sigla, end, cnpj, cnae, desc, grau, grupo]
                 save_tabela("Secretaria", df_sec)
 
             # --- Cargo ---
@@ -214,3 +224,431 @@ def sincronizar_tabelas_entidades(is_initial=False):
             if col_cargo:
                 cargos = df_excel[col_cargo].dropna().unique()
                 df_cargo = df_cargo[df_cargo["Nome do Cargo"].isin(cargos)]
+                for cargo in cargos:
+                    if cargo not in df_cargo["Nome do Cargo"].values:
+                        df_cargo.loc[len(df_cargo)] = [proximo_id(df_cargo, "Id_Cargo"), cargo]
+                save_tabela("Cargo", df_cargo)
+                
+            # --- Risco ---
+            if "Nome Risco" in df_excel.columns:
+                riscos = df_excel["Nome Risco"].dropna().unique()
+                df_risco = df_risco[df_risco["Nome Risco"].isin(riscos)]
+                for risco in riscos:
+                    if risco not in df_risco["Nome Risco"].values:
+                        df_risco.loc[len(df_risco)] = [proximo_id(df_risco, "Id_Risco"), risco]
+                save_tabela("Riscos_Ambientais", df_risco)
+
+        return True, "Sincronização via GSheets concluída com sucesso."
+    
+    except Exception as e:
+        return False, f"Erro ao processar DADOSTABELAS Cloud: {str(e)}"
+
+if st.session_state["usuario_perfil"] == "Admin":
+    df_validador = load_tabela("Secretaria")
+    if df_validador.empty:
+        sincronizar_tabelas_entidades(is_initial=True)
+
+tabs_gui = ["Cadastro Interativo", "Consulta", "Relatório Completo"]
+abas = st.tabs(tabs_gui)
+
+if st.session_state["usuario_perfil"] == "Admin":
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🔄 Sincronizar Tabelas (Puxar da Planilha Fonte)"):
+        suc, msg = sincronizar_tabelas_entidades(is_initial=False)
+        if suc:
+             st.sidebar.success(msg)
+        else:
+             st.sidebar.error(msg)
+
+
+# ==============================================================================
+# ABA 1: CADASTRO INTERATIVO
+# ==============================================================================
+with abas[0]:
+    st.header("📝 Formulário de Mapeamento do PGR (5 Faixas)")
+    
+    if "lista_riscos" not in st.session_state:
+        st.session_state["lista_riscos"] = []
+    if "fk" not in st.session_state:
+        st.session_state["fk"] = 0
+    if "ia_sugestoes" not in st.session_state:
+        st.session_state["ia_sugestoes"] = []
+
+    st.markdown("### FAIXA 1: Dados Iniciais e Organogramas")
+    df_sec_load = load_tabela("Secretaria")
+    df_cargo_load = load_tabela("Cargo")
+    
+    c1, c2 = st.columns(2)
+    op_sec = df_sec_load["Nome do Órgão"].tolist() if not df_sec_load.empty else []
+    sec_selecionada = c1.selectbox("Órgão / Secretaria", op_sec)
+    lotacao = c2.text_input("Lotação (Setor/Departamento)")
+    desc_fisica = st.text_input("Descrição Física do Ambiente")
+    
+    c3, c4 = st.columns(2)
+    op_cargo = df_cargo_load["Nome do Cargo"].tolist() if not df_cargo_load.empty else []
+    cargo_selecionado = c3.selectbox("Cargo Referência", op_cargo)
+    funcao_text = c4.text_input("Função Praticada")
+    
+    c5, c6 = st.columns(2)
+    qtd_m = c5.number_input("Quantidade Masc. (M)", min_value=0, step=1)
+    qtd_f = c6.number_input("Quantidade Fem. (F)", min_value=0, step=1)
+    st.info(f"**Total Automático Registrado:** {qtd_m + qtd_f}")
+    
+    desc_atv = st.text_area("Descrição Geral da Atividade (Função)")
+
+    # --- INTEGRAÇÃO COM GOOGLE AI STUDIO (GEMINI) ---
+    if st.button("🪄 Sugerir Riscos com IA (Gemini)", use_container_width=True):
+        if not desc_atv or not cargo_selecionado:
+            st.error("Por favor, preencha o Cargo e a Descrição da Atividade para a IA analisar.")
+        else:
+            with st.spinner("O Gemini está analisando as atividades laborais em conformidade com as NRs..."):
+                try:
+                    client = genai.Client(api_key=st.secrets["auth"]["GEMINI_API_KEY"])
+                    prompt = f"Atue como um Engenheiro de Segurança especialista em PGR. Analise o cargo '{cargo_selecionado}' que realiza as seguintes atividades: '{desc_atv}'. Gere uma lista de riscos previsíveis seguindo a NR-01."
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt,
+                        config={"response_mime_type": "application/json", "response_schema": SugestaoPGR}
+                    )
+                    st.session_state["ia_sugestoes"] = response.parsed.riscos
+                    st.success(f"Encontramos {len(st.session_state['ia_sugestoes'])} sugestões de riscos técnicos!")
+                except Exception as ai_err:
+                    st.error(f"Erro na conexão com o Google AI Studio: {ai_err}")
+
+    # Cards da IA para preenchimento rápido
+    if st.session_state["ia_sugestoes"]:
+        st.markdown("##### 💡 Riscos Identificados pela IA para esta Função:")
+        for idx_ia, item_ia in enumerate(st.session_state["ia_sugestoes"]):
+            with st.expander(f"Sugestão {idx_ia + 1}: {item_ia.fator_risco}"):
+                st.write(f"**Fonte Geradora:** {item_ia.fonte_geradora}")
+                st.write(f"**Danos à Saúde:** {item_ia.danos_saude}")
+                st.write(f"**Medida Proposta:** {item_ia.medida_proposta} ({item_ia.tipo_medida})")
+                if st.button("Injetar dados deste risco no formulário abaixo", key=f"btn_ia_{idx_ia}"):
+                    st.session_state[f"fator_{st.session_state['fk']}"] = item_ia.fator_risco
+                    st.session_state[f"fonte_{st.session_state['fk']}"] = item_ia.fonte_geradora
+                    st.session_state[f"danos_{st.session_state['fk']}"] = item_ia.danos_saude
+                    st.session_state[f"mp_{st.session_state['fk']}"] = item_ia.medida_proposta
+                    st.rerun()
+
+    if len(st.session_state["lista_riscos"]) > 0:
+        st.markdown("### Riscos Adicionados para Esta Função")
+        df_show = pd.DataFrame(st.session_state["lista_riscos"])
+        cols_show = ["risco", "fator", "medida_existente", "medida_proposta"]
+        st.dataframe(df_show[cols_show] if len(df_show.columns) >= 4 else df_show, use_container_width=True)
+
+    st.markdown("---")
+    st.markdown("#### ADICIONAR NOVO RISCO À FUNÇÃO")
+    fk = st.session_state["fk"]
+
+    st.markdown("##### FAIXA 2: Identificação do Risco")
+    df_risco_load = load_tabela("Riscos_Ambientais")
+    op_risco = df_risco_load["Nome Risco"].tolist() if not df_risco_load.empty else []
+    risco_selecionado = st.selectbox("Risco Ambiental", op_risco, key=f"risco_{fk}")
+    
+    c7, c8 = st.columns(2)
+    fator_risco = c7.text_input("Fator de Risco", key=f"fator_{fk}")
+    fonte_geradora = c8.text_input("Fonte Geradora", key=f"fonte_{fk}")
+    aval_quant = c7.text_input("Avaliação Quantitativa", key=f"aval_{fk}")
+    danos = c8.text_input("Danos Possíveis à Saúde", key=f"danos_{fk}")
+    
+    df_exp = load_tabela("Tipo_Exposicao")
+    op_exp = df_exp["Nome Exposição"].tolist() if not df_exp.empty else []
+    expo_sel = st.selectbox("Tipo de Exposição", op_exp, key=f"expo_{fk}")
+    st.markdown("##### FAIXA 3: Avaliação de Risco Atual (Com medidas existentes)")
+    med_exist = st.text_area("Descreva a Medida Existente", key=f"me_{fk}")
+    c9, c10 = st.columns(2)
+    epi_eficaz = c9.selectbox("EPI Eficaz?", ["Sim", "Não"], key=f"epi_{fk}")
+    epc_eficaz = c10.selectbox("EPC Eficaz?", ["Sim", "Não"], key=f"epc_{fk}")
+    
+    df_prob = load_tabela("Probabilidade")
+    df_efeito = load_tabela("Efeito")
+    
+    c11, c12 = st.columns(2)
+    op_prb = [f"{row['Peso Probabilidade']} - {row['Nome Probabilidade']}" for _, row in df_prob.iterrows()]
+    prob_atual_sel = c11.selectbox("Probabilidade Atual", op_prb, key=f"pa_{fk}")
+    peso_p_atual = int(str(prob_atual_sel).split(" - ")[0])
+    
+    op_ef = [f"{row['Peso Efeito']} - {row['Nome Efeito']}" for _, row in df_efeito.iterrows()]
+    efeito_atual_sel = c12.selectbox("Efeito (Severidade) Atual", op_ef, key=f"ea_{fk}")
+    peso_e_atual = int(str(efeito_atual_sel).split(" - ")[0])
+    
+    val_x_atual, niv_atual, class_atual, _ = calcula_matriz(peso_p_atual, peso_e_atual)
+    st.warning(f"**Cálculo Automático Matriz Atual:** Valor {val_x_atual} -> Nível '{niv_atual}' / Classificação '{class_atual}'")
+    
+    st.markdown("##### FAIXA 4: Plano de Ação (Medidas Propostas)")
+    med_prop = st.text_area("Descreva as Medidas Propostas", key=f"mp_{fk}")
+    df_tm_prop = load_tabela("Tipo_Medida_Proposta")
+    op_tmp = df_tm_prop["Nome Tipo Medida Proposta"].tolist() if not df_tm_prop.empty else []
+    tmp_sel = st.selectbox("Classificação da Medida Proposta", op_tmp, key=f"tmp_{fk}")
+    
+    c13, c14 = st.columns(2)
+    prob_prop_sel = c13.selectbox("Probabilidade Esperada (Proposta)", op_prb, key=f"pp_{fk}")
+    efeito_prop_sel = c14.selectbox("Efeito Esperado (Proposta)", op_ef, key=f"ep_{fk}")
+    peso_p_prop = int(str(prob_prop_sel).split(" - ")[0])
+    peso_e_prop = int(str(efeito_prop_sel).split(" - ")[0])
+    
+    val_x_prop, niv_prop, class_prop, imediata_prop = calcula_matriz(peso_p_prop, peso_e_prop)
+    st.success(f"**Matriz Proposta:** Valor {val_x_prop} -> Nível '{niv_prop}' / Classificação '{class_prop}'")
+    
+    st.markdown("##### FAIXA 5: Acompanhamento de Execução")
+    st.info(f"👉 **Imediata (Preenchimento Automático):** {imediata_prop}")
+    c15, c16 = st.columns(2)
+    resp_acao = c15.text_input("Responsável Técnico pela Ação", key=f"resp_{fk}")
+    porc_exec = c16.number_input("Concluído (%)", min_value=0, max_value=100, key=f"porc_{fk}")
+    
+    c17, c18, c19 = st.columns(3)
+    # AJUSTE 1: Formato brasileiro visual de exibição na tela do Streamlit (DD/MM/YYYY)
+    dt_ini = c17.date_input("Data Inicial", format="DD/MM/YYYY", key=f"dti_{fk}")
+    dt_fim = c18.date_input("Data Limite (Final)", format="DD/MM/YYYY", key=f"dtf_{fk}")
+    dt_exec = c19.date_input("Data de Execução Tática", value=None, format="DD/MM/YYYY", key=f"dte_{fk}")
+    status_acao = st.selectbox("Status", ["Não Iniciado", "Em Andamento", "Atrasado", "Concluído"], key=f"st_{fk}")
+    
+    # BOTÃO PARA ADICIONAR RISCO
+    if st.button("➕ Adicionar Este Risco", use_container_width=True):
+        novo_risco = {
+            "risco": risco_selecionado,
+            "fator": fator_risco,
+            "fonte": fonte_geradora,
+            "aval": aval_quant,
+            "danos": danos,
+            "expo": expo_sel,
+            "medida_existente": med_exist,
+            "epi": epi_eficaz,
+            "epc": epc_eficaz,
+            "prob_atual": prob_atual_sel,
+            "efeito_atual": efeito_atual_sel,
+            "val_x_atual": val_x_atual,
+            "class_atual": class_atual,
+            "medida_proposta": med_prop,
+            "tmp_sel": tmp_sel,
+            "prob_prop": prob_prop_sel,
+            "efeito_prop": efeito_prop_sel,
+            "val_x_prop": val_x_prop,
+            "class_prop": class_prop,
+            "imediata": imediata_prop,
+            "resp_acao": resp_acao,
+            "porc_exec": porc_exec,
+            # AJUSTE 2: Conversão explícita para string formatada em DD/MM/AAAA para salvar nas planilhas do Sheets
+            "dt_ini": dt_ini.strftime("%d/%m/%Y") if dt_ini else "",
+            "dt_fim": dt_fim.strftime("%d/%m/%Y") if dt_fim else "",
+            "dt_exec": dt_exec.strftime("%d/%m/%Y") if dt_exec else "",
+            "status_acao": status_acao
+        }
+        st.session_state["lista_riscos"].append(novo_risco)
+        st.session_state["fk"] += 1
+        st.session_state["ia_sugestoes"] = [] # Limpa a memória das sugestões da IA para o próximo ciclo
+        st.rerun()
+
+    st.markdown("---")
+
+    # SALVAMENTO EM BANCO
+    if st.button("✅ Salvar Cadastro Geral na Nuvem (Função + Riscos)"):
+        if len(st.session_state["lista_riscos"]) == 0:
+            st.error("Adicione pelo menos um risco antes de salvar!")
+        else:
+            try:
+                id_sec = df_sec_load[df_sec_load["Nome do Órgão"] == sec_selecionada].iloc[0]["Id_Secretaria"]
+                id_cargo = df_cargo_load[df_cargo_load["Nome do Cargo"] == cargo_selecionado].iloc[0]["Id_Cargo"]
+                
+                # 1. Sec_Lotacao
+                df_sl = load_tabela("Secretaria_Lotacao")
+                id_sl = proximo_id(df_sl, "Id_Sec_Lotação")
+                df_sl.loc[len(df_sl)] = [id_sl, id_sec, lotacao, desc_fisica]
+                save_tabela("Secretaria_Lotacao", df_sl)
+                
+                # 2. Cargo_Funcao
+                df_cf = load_tabela("Cargo_Funcao")
+                id_cf = proximo_id(df_cf, "Id_Cargo_Func")
+                df_cf.loc[len(df_cf)] = [id_cf, id_sl, id_cargo, funcao_text, desc_atv, qtd_m, qtd_f, qtd_m+qtd_f]
+                save_tabela("Cargo_Funcao", df_cf)
+                
+                # Loop Riscos
+                df_lr = load_tabela("Lotacao_Risco")
+                df_me = load_tabela("Risco_Medida_Existente")
+                df_mp = load_tabela("Risco_Medida_Proposta")
+
+                for ri in st.session_state["lista_riscos"]:
+                    id_risco = df_risco_load[df_risco_load["Nome Risco"] == ri["risco"]].iloc[0]["Id_Risco"]
+                    id_expo = df_exp[df_exp["Nome Exposição"] == ri["expo"]].iloc[0]["Id_Exposição"]
+                    
+                    p_atual_peso = int(str(ri["prob_atual"]).split(" - ")[0])
+                    e_atual_peso = int(str(ri["efeito_atual"]).split(" - ")[0])
+                    p_prop_peso = int(str(ri["prob_prop"]).split(" - ")[0])
+                    e_prop_peso = int(str(ri["efeito_prop"]).split(" - ")[0])
+
+                    id_prob_at = df_prob[df_prob["Peso Probabilidade"] == p_atual_peso].iloc[0]["Id_Probabilidade"]
+                    id_ef_at = df_efeito[df_efeito["Peso Efeito"] == e_atual_peso].iloc[0]["Id_Efeito"]
+                    id_prob_pr = df_prob[df_prob["Peso Probabilidade"] == p_prop_peso].iloc[0]["Id_Probabilidade"]
+                    id_ef_pr = df_efeito[df_efeito["Peso Efeito"] == e_prop_peso].iloc[0]["Id_Efeito"]
+                    
+                    id_lr = proximo_id(df_lr, "Id_Lotação_Risco")
+                    df_lr.loc[len(df_lr)] = [id_lr, id_sl, id_cf, id_risco, ri["fator"], ri["fonte"], ri["aval"], ri["danos"], id_expo]
+                    
+                    id_me = proximo_id(df_me, "Id_Risco_Med_Existente")
+                    df_me.loc[len(df_me)] = [id_me, id_lr, ri["medida_existente"], ri["epi"], ri["epc"], id_prob_at, id_ef_at, ri["val_x_atual"], ri["class_atual"]]
+                    
+                    id_mp = proximo_id(df_mp, "Id_Risco_Med_Proposta")
+                    df_mp.loc[len(df_mp)] = [id_mp, id_me, ri["medida_proposta"], id_prob_pr, id_ef_pr, ri["val_x_prop"], ri["class_prop"], ri["imediata"], ri["resp_acao"], ri["dt_ini"], ri["dt_fim"], ri["status_acao"], ri["porc_exec"], ri["dt_exec"]]
+
+                save_tabela("Lotacao_Risco", df_lr)
+                save_tabela("Risco_Medida_Existente", df_me)
+                save_tabela("Risco_Medida_Proposta", df_mp)
+                
+                st.session_state["lista_riscos"] = []
+                st.success("Dados encadeados salvos com sucesso no Google Drive.")
+                st.rerun()
+            except Exception as ex:
+                st.error(f"Erro ao salvar relações: {ex}")
+
+# ==============================================================================
+# ABA 2: CONSULTA DE DADOS + FILTROS CUMULATIVOS
+# ==============================================================================
+with abas[1]:
+    st.header("🔍 Painel de Filtros Avançados")
+    try:
+        df1 = load_tabela("Secretaria").rename(columns={"Id_Secretaria": "id_sec"})
+        df2 = load_tabela("Secretaria_Lotacao").rename(columns={"Id_Sec_Lotação": "id_sl", "Id_Secretaria": "id_sec"})
+        df3 = load_tabela("Cargo_Funcao").rename(columns={"Id_Cargo_Func": "id_cf", "Id_Sec_Lotação": "id_sl", "Id_Cargo": "id_c"})
+        df4 = load_tabela("Cargo").rename(columns={"Id_Cargo": "id_c"})
+        df_lr = load_tabela("Lotacao_Risco").rename(columns={"Id_Lotação_Risco": "id_lr", "Id_Cargo_Func": "id_cf", "Id_Risco": "id_risco"})
+        df_risco = load_tabela("Riscos_Ambientais").rename(columns={"Id_Risco": "id_risco"})
+        df_me = load_tabela("Risco_Medida_Existente").rename(columns={"Id_Risco_Med_Existente": "id_me", "Id_Lotação_Risco": "id_lr"})
+        df_mp = load_tabela("Risco_Medida_Proposta").rename(columns={"Id_Risco_Med_Proposta": "id_mp", "Id_Risco_Med_Existente": "id_me"})
+        
+        m_sec_sl = pd.merge(df1, df2, on="id_sec", how="left")
+        m_sl_cf = pd.merge(m_sec_sl, df3, on="id_sl", how="left")
+        m_cf_carg = pd.merge(m_sl_cf, df4, on="id_c", how="left")
+        
+        m_c_lr = pd.merge(m_cf_carg, df_lr, on="id_cf", how="left")
+        m_lr_ri = pd.merge(m_c_lr, df_risco, on="id_risco", how="left")
+        
+        m_ri_me = pd.merge(m_lr_ri, df_me, on="id_lr", how="left")
+        view_flat = pd.merge(m_ri_me, df_mp, on="id_me", how="left")
+        
+        c01, c02, c03 = st.columns(3)
+            op_f_orgao = ["Todos"] + list(view_flat["Nome do Órgão"].dropna().unique())
+        f_o = c01.selectbox("Filtro: Órgão (Secretaria)", op_f_orgao)
+        
+        op_f_carg = ["Todos"] + list(view_flat["Nome do Cargo"].dropna().unique())
+        f_c = c02.selectbox("Filtro: Cargo", op_f_carg)
+        
+        op_f_fun = ["Todos"] + list(view_flat["Função"].dropna().unique())
+        f_f = c03.selectbox("Filtro: Função Executada", op_f_fun)
+        
+        filtered_view = view_flat.copy()
+        if f_o != "Todos": filtered_view = filtered_view[filtered_view["Nome do Órgão"] == f_o]
+        if f_c != "Todos": filtered_view = filtered_view[filtered_view["Nome do Cargo"] == f_c]
+        if f_f != "Todos": filtered_view = filtered_view[filtered_view["Função"] == f_f]
+        
+        st.dataframe(filtered_view, use_container_width=True)
+        st.info("💡 As atualizações afetam diretamente as seleções mostradas aqui.")
+    except Exception as e:
+        st.warning(f"Banco de dados insuficiente para montagem da visualização. Detalhe: {e}")
+
+
+# ==============================================================================
+# ABA 3: RELATÓRIO DO PGR E MÓDULO ODT
+# ==============================================================================
+with abas:
+    st.header("🗄️ Relatorização Consolidadada e Motor PDF")
+    
+    st.subheader("Equipe Técnica do SESMT")
+    df_resp = pd.DataFrame([{"nome": "Nome Exemplo", "matricula": "0000", "funcao": "Cargo", "conselho": "CR Exemplo"}])
+    st.write("Edite os dados na tabela abaixo para inclusão automatizada na página 2 do Relatório .odt:")
+    edited_sesmt = st.data_editor(df_resp, num_rows="dynamic", key="sesmt_edit", use_container_width=True)
+    
+    responsaveis_assign = st.multiselect("Selecione quem fará a ASSINATURA final no relatório:", edited_sesmt["nome"].tolist())
+    
+    st.markdown("---")
+    try:
+        df_sec = load_tabela("Secretaria")
+        all_secretarias = df_sec["Nome do Órgão"].tolist() if not df_sec.empty else []
+    except:
+        all_secretarias = []
+        
+    sec_selecionada_relatorio = st.selectbox("Selecione o Entidade a emitir o Relatório PGR PDF:", all_secretarias)
+
+    if st.session_state["usuario_perfil"] == "Admin":
+        if st.button("📄 GERAR RELATÓRIO PGR OFICIAL (PDF/LibreOffice)"):
+            with st.spinner("Processando Integração Automática ODT-PDF via Secretary engine..."):
+                try:
+                    sec_dados = df_sec[df_sec["Nome do Órgão"] == sec_selecionada_relatorio].iloc[0]
+                    id_ss = sec_dados["Id_Secretaria"]
+                    df2 = load_tabela("Secretaria_Lotacao")
+                    df3 = load_tabela("Cargo_Funcao")
+                    lotes = df2[df2["Id_Secretaria"] == id_ss]["Id_Sec_Lotação"].tolist()
+                    total_mf_calc = df3[df3["Id_Sec_Lotação"].isin(lotes)]["TOTAL"].sum()
+                    
+                    hj = datetime.date.today()
+                    tag_data = f"{hj.month}/{hj.year} a {hj.month}/{hj.year + 2}"
+                    riscos_faixas = [{"col1": "Exemplo", "col2": "Exemplo", "col3": "Ex", "col4": "Ex", "col5": "Ex", "col6": "Ex"}]
+
+                    # Engine Secretary Data
+                    engine = Renderer()
+                    parametros = {
+                        "NOME_ORGAO": str(sec_dados["Nome do Órgão"]),
+                        "DATA_EMISSAO": tag_data,
+                        "TOTALMF": str(total_mf_calc),
+                        "ENDERECO": str(sec_dados["Endereço"]),
+                        "CNPJ": str(sec_dados["CNPJ"]),
+                        "CNAE": str(sec_dados["CNAE"]),
+                        "DESC_CNAE": str(sec_dados["Descrição CNAE"]),
+                        "GRAU_RISCO": str(sec_dados["Grau de Risco"]),
+                        "GRUPO_RISCO": str(sec_dados["Grupo de Risco"]),
+                        "SIGLA": str(sec_dados["Sigla"]),
+                        "equipe_tecnica": edited_sesmt.to_dict("records"),
+                        "responsaveis": edited_sesmt[edited_sesmt["nome"].isin(responsaveis_assign)].to_dict("records"),
+                        "inventarios": riscos_faixas
+                    }
+
+                    # Baixar ODT pelo ID da API
+                    request = drive_service.files().get_media(fileId=ODT_TEMPLATE_ID)
+                    fh = io.BytesIO()
+                    downloader = MediaIoBaseDownload(fh, request)
+                    done = False
+                    while done is False:
+                        status, done = downloader.next_chunk()
+                    
+                    fh.seek(0)
+                    template_path = "/tmp/Documento_base.odt"
+                    with open(template_path, "wb") as f:
+                        f.write(fh.read())
+                        
+                    resultado_odt = engine.render(template_path, **parametros)
+                    
+                    odt_out = "/tmp/relatorio_temp.odt"
+                    with open(odt_out, 'wb') as fout:
+                        fout.write(resultado_odt)
+                        
+                    comando = ['soffice', '--headless', '--convert-to', 'pdf', '--outdir', '/tmp', odt_out]
+                    subprocess.run(comando, check=True)
+                    pdf_path = "/tmp/relatorio_temp.pdf"
+                    
+                    with open(pdf_path, "rb") as pdf_file:
+                        pdf_bytes = pdf_file.read()
+
+                    st.download_button("📥 Download Arquivo Validado (PDF)", data=pdf_bytes, file_name=f"PGR_{sec_selecionada_relatorio}.pdf", mime="application/pdf")
+                    
+                    try:
+                        os.remove(template_path)
+                        os.remove(odt_out)
+                        os.remove(pdf_path)
+                    except:
+                        pass
+                except Exception as g_erro:
+                    st.error(f"Engenharia de automação Falhou na esteira: {str(g_erro)}")
+    else:
+        st.error("⛔ A emissão do relatório oficial em PDF é restrita ao Administrador.")
+
+def main():
+    pass
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as default_erro:
+        st.error(f"🚨 Ocorreu um Erro Inesperado na Aplicação: {str(default_erro)}")
+        st.code(traceback.format_exc(), language="python")
+
+
+
