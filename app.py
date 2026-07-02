@@ -320,8 +320,8 @@ with abas[0]:
     st.info(f"**Total Automático Registrado:** {qtd_m + qtd_f}")
     
     desc_atv = st.text_area("Descrição Geral da Atividade (Função)")
-        if "ia_sugestoes" not in st.session_state:
-        st.session_state["ia_sugestoes"] = []
+    if "ia_sugestoes" not in st.session_state:
+    st.session_state["ia_sugestoes"] = []
 
     if st.button("🪄 Sugerir Riscos com IA (Gemini)", use_container_width=True):
         if not desc_atv or not cargo_selecionada:
