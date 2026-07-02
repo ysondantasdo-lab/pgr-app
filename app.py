@@ -10,6 +10,23 @@ import subprocess
 import io
 import markupsafe
 import jinja2
+from google import genai
+from pydantic import BaseModel, Field
+from typing import List
+from secretary import Renderer
+import traceback
+
+# Estrutura para a Inteligência Artificial do Gemini entregar os dados organizados
+class RiscoEstruturado(BaseModel):
+    fator_risco: str = Field(description="Ex: Ruído contínuo, Poeira de madeira")
+    fonte_geradora: str = Field(description="Ex: Operação de serra circular")
+    danos_saude: str = Field(description="Ex: Perda auditiva, irritação respiratória")
+    medida_proposta: str = Field(description="Ação sugerida para mitigar o risco")
+    tipo_medida: str = Field(description="Deve ser exatamente um: EPC, EPI, Administrativa/Organizacional ou Médica")
+
+class SugestaoPGR(BaseModel):
+    riscos: List[RiscoEstruturado]
+    
 
 # Correção de compatibilidade para a biblioteca secretary no Python >= 3.10
 jinja2.Markup = markupsafe.Markup
@@ -303,6 +320,41 @@ with abas[0]:
     st.info(f"**Total Automático Registrado:** {qtd_m + qtd_f}")
     
     desc_atv = st.text_area("Descrição Geral da Atividade (Função)")
+        if "ia_sugestoes" not in st.session_state:
+        st.session_state["ia_sugestoes"] = []
+
+    if st.button("🪄 Sugerir Riscos com IA (Gemini)", use_container_width=True):
+        if not desc_atv or not cargo_selecionada:
+            st.error("Por favor, preencha o Cargo e a Descrição da Atividade para a IA analisar.")
+        else:
+            with st.spinner("O Gemini está analisando o ambiente de trabalho..."):
+                try:
+                    client = genai.Client(api_key=st.secrets["auth"]["GEMINI_API_KEY"])
+                    prompt = f"Atue como um Engenheiro de Segurança do Trabalho Sênior. Analise o cargo '{cargo_selecionada}' que realiza a atividade: '{desc_atv}'. Gere uma lista de riscos ambientais previsíveis seguindo as diretrizes da NR-01."
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt,
+                        config={
+                            "response_mime_type": "application/json",
+                            "response_schema": SugestaoPGR
+                        }
+                    )
+                    st.session_state["ia_sugestoes"] = response.parsed.riscos
+                    st.success("Sugestões geradas com sucesso!")
+                except Exception as ai_err:
+                    st.error(f"Erro na IA: {ai_err}")
+
+    if st.session_state["ia_sugestoes"]:
+        for idx_ia, item_ia in enumerate(st.session_state["ia_sugestoes"]):
+            with st.expander(f"💡 Sugestão {idx_ia + 1}: {item_ia.fator_risco}"):
+                st.write(f"**Fonte:** {item_ia.fonte_geradora} | **Danos:** {item_ia.danos_saude}")
+                st.write(f"**Proposta:** {item_ia.medida_proposta}")
+                if st.button("Usar estes dados no formulário abaixo", key=f"btn_ia_{idx_ia}"):
+                    st.session_state[f"fator_{fk}"] = item_ia.fator_risco
+                    st.session_state[f"fonte_{fk}"] = item_ia.fonte_geradora
+                    st.session_state[f"danos_{fk}"] = item_ia.danos_saude
+                    st.session_state[f"mp_{fk}"] = item_ia.medida_proposta
+                    st.rerun()
 
     # ------------------ RISCOS JÁ ADICIONADOS ------------------
     if len(st.session_state["lista_riscos"]) > 0:
@@ -373,9 +425,10 @@ with abas[0]:
     resp_acao = c15.text_input("Responsável Técnico pela Ação", key=f"resp_{fk}")
     porc_exec = c16.number_input("Concluído (%)", min_value=0, max_value=100, key=f"porc_{fk}")
     c17, c18, c19 = st.columns(3)
-    dt_ini = c17.date_input("Dada Inicial", key=f"dti_{fk}")
-    dt_fim = c18.date_input("Data Limite (Final)", key=f"dtf_{fk}")
-    dt_exec = c19.date_input("Data de Execução Tática", value=None, key=f"dte_{fk}")
+    dt_ini = c17.date_input("Data Inicial", format="DD/MM/YYYY", key=f"dti_{fk}")
+    dt_fim = c18.date_input("Data Limite (Final)", format="DD/MM/YYYY", key=f"dtf_{fk}")
+    dt_exec = c19.date_input("Data de Execução Tática", value=None, format="DD/MM/YYYY", key=f"dte_{fk}")
+
     status_acao = st.selectbox("Status", ["Não Iniciado", "Em Andamento", "Atrasado", "Concluído"], key=f"st_{fk}")
     
     # BOTÃO PARA ADICIONAR RISCO
@@ -403,13 +456,16 @@ with abas[0]:
             "imediata": imediata_prop,
             "resp_acao": resp_acao,
             "porc_exec": porc_exec,
-            "dt_ini": str(dt_ini),
-            "dt_fim": str(dt_fim),
-            "dt_exec": str(dt_exec) if dt_exec else "",
+            "dt_ini": dt_ini.strftime("%d/%m/%Y") if dt_ini else "",
+            "dt_fim": dt_fim.strftime("%d/%m/%Y") if dt_fim else "",
+            "dt_exec": dt_exec.strftime("%d/%m/%Y") if dt_exec else "",
+
             "status_acao": status_acao
         }
         st.session_state["lista_riscos"].append(novo_risco)
         st.session_state["fk"] += 1
+        st.session_state["ia_sugestoes"] = []
+
         st.rerun()
 
     st.markdown("---")
