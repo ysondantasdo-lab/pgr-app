@@ -7,3 +7,4 @@ secretary
 openpyxl
 Jinja2
 markupsafe
+google-genai
