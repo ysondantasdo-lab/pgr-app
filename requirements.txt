@@ -1,10 +1,10 @@
-streamlit
+streamlit>=1.35.0
 pandas
 gspread
 google-api-python-client
 google-auth
-secretary
+secretary==0.2.19
 openpyxl
 jinja2==3.0.3
-markupsafe
+markupsafe==2.0.1
 google-genai
