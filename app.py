@@ -120,7 +120,7 @@ ESTRUTURA_TABS = {
     "Risco_Medida_Proposta": ["Id_Risco_Med_Proposta", "Id_Risco_Med_Existente", "Medida Proposta", "Id_Probabilidade", "Id_Efeito", "Nível", "Classificação", "Imediata", "Responsável", "Data Início", "Data Final", "Status", "Porcentagem", "Data Execução"]
 }
 
-@st.cache_data(ttl=120)
+@st.cache_data
 def load_tabela(nome):
     try:
         sh = gc.open_by_key(DB_SHEET_ID)
