@@ -496,6 +496,7 @@ with abas[0]:
     st.markdown("##### FAIXA 5: Acompanhamento de Execução")
     
     # Substituição cirúrgica: sai st.info e entra st.text_area expansível
+    
     st.text_area(
         label="👉 Imediata (Preenchimento Automático):",
         value=imediata_prop,
@@ -512,7 +513,10 @@ with abas[0]:
     dt_fim = c18.date_input("Data Limite (Final)", value=None, format="DD/MM/YYYY", key=f"dtf_{fk}")
     dt_exec = c19.date_input("Data de Execução", value=None, format="DD/MM/YYYY", key=f"dte_{fk}")
 
-    status_acao = st.selectbox("Status", ["Não Iniciado", "Em Andamento", "Atrasado", "Concluído"], key=f"st_{fk}")
+    # ADICIONE APENAS ESTAS DUAS LINHAS AQUI E APAGUE QUALQUER REPETIÇÃO ABAIXO DELAS:
+    status_opcoes = ["Não Iniciado", "Em Andamento", "Concluído", "Atrasado"]
+    status_sel = st.selectbox("Status", status_opcoes, key=f"status_{fk}")
+
     
     # BOTÃO PARA ADICIONAR RISCO
     if st.button("➕ Adicionar Este Risco", use_container_width=True):
