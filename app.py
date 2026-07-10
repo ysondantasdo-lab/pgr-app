@@ -440,14 +440,23 @@ with abas[0]:
     st.success(f"**Matriz Proposta:** Valor {val_x_prop} -> Nível '{niv_prop}' / Classificação '{class_prop}'")
     
     st.markdown("##### FAIXA 5: Acompanhamento de Execução")
-    st.info(f"👉 **Imediata (Preenchimento Automático):** {imediata_prop}")
+    
+    # Substituição cirúrgica: sai st.info e entra st.text_area expansível
+    st.text_area(
+        label="👉 Imediata (Preenchimento Automático):",
+        value=imediata_prop,
+        height=100,          # Altura inicial confortável
+        disabled=True,       # Bloqueia para o usuário não conseguir digitar por cima
+        key=f"imediata_show_{fk}"
+    )
+    
     c15, c16 = st.columns(2)
     resp_acao = c15.text_input("Responsável Técnico pela Ação", key=f"resp_{fk}")
     porc_exec = c16.number_input("Concluído (%)", min_value=0, max_value=100, key=f"porc_{fk}")
     c17, c18, c19 = st.columns(3)
-    dt_ini = c17.date_input("Data Inicial", format="DD/MM/YYYY", key=f"dti_{fk}")
-    dt_fim = c18.date_input("Data Limite (Final)", format="DD/MM/YYYY", key=f"dtf_{fk}")
-    dt_exec = c19.date_input("Data de Execução Tática", value=None, format="DD/MM/YYYY", key=f"dte_{fk}")
+    dt_ini = c17.date_input("Data Inicial", value=Nome, format="DD/MM/YYYY", key=f"dti_{fk}")
+    dt_fim = c18.date_input("Data Limite (Final)", value=Nome, format="DD/MM/YYYY", key=f"dtf_{fk}")
+    dt_exec = c19.date_input("Data de Execução", value=None, format="DD/MM/YYYY", key=f"dte_{fk}")
 
     status_acao = st.selectbox("Status", ["Não Iniciado", "Em Andamento", "Atrasado", "Concluído"], key=f"st_{fk}")
     
