@@ -294,19 +294,19 @@ def calcula_matriz(peso_p, peso_e):
     if x <= 3:
         nivel = "Trivial"
         classificacao = "Irrelevante"
-        imediata = "Não prioritário. Ações dentro do princípio de melhoria contínua..."
+        imediata = "Irrelevante - Não prioritário.Ações dentro do princípio de melhoria contínua. Pode ser necessária avaliação quantitativa do Setor/GHE para confirmação da categoria, a critério do profissional de Higiene Ocupacional."
     elif 4 <= x <= 8:
         nivel = "Moderado"
         classificacao = "Crítica"
-        imediata = "Prioridade preferencial. Adotar medidas de controle..."
+        imediata = "De Atenção - Prioridade básica. Iniciar processo de avaliação quantitativa do Setor/GHE para confirmação da categoria e monitoramento periódico."
     elif 9 <= x <= 12:
         nivel = "Alto"
         classificacao = "Não Tolerado"
-        imediata = "Prioridade máxima. Adotar medidas imediatas de controle..."
+        imediata = "Crítica - Prioridade preferencial.Adotar medidas de controle para redução da exposição e iniciar processo de avaliação quantitativa do Setor/GHE."
     else: # >= 16
         nivel = "Muito Alto"
         classificacao = "Não Tolerado"
-        imediata = "Prioridade máxima. Adotar medidas imediatas de controle..."
+        imediata = "Não tolerável - Prioridade máxima. Adotar medidas imediatas de controle. Quando não, a continuidade da operação só poderá ocorrer com ciência e aprovação do gerente geral da unidade ou instalação. Iniciar processo de avaliação quantitativa do Setor/GHE para verificação do rebaixamento da categoria de risco."
     return x, nivel, classificacao, imediata
 
 with abas[0]:
