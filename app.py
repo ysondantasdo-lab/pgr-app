@@ -260,7 +260,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
             if "Nome Risco" in df_excel.columns: 
                 riscos = df_excel["Nome Risco"].dropna().unique() 
                 df_risco = df_risco[df_risco["Nome Risco"].isin(riscos)] 
-                for risco in risks: 
+                for risco in riscos: 
                     if risco not in df_risco["Nome Risco"].values: 
                         df_risco.loc[len(df_risco)] = [proximo_id(df_risco, "Id_Risco"), risco] 
                 save_tabela("Riscos_Ambientais", df_risco) 
