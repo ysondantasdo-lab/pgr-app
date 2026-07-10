@@ -501,7 +501,7 @@ with abas[0]:
         label="👉 Imediata (Preenchimento Automático):",
         value=imediata_prop,
         height=100,          # Altura inicial confortável
-        disabled=True,       # Bloqueia para o usuário não conseguir digitar por cima
+        read_only=True,      # CORREÇÃO: Bloqueia a digitação mas mantém o visual 100% nítido
         key=f"imediata_show_{fk}"
     )
     
