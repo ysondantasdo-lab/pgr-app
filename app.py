@@ -493,8 +493,7 @@ with abas[0]:
         }
         st.session_state["lista_riscos"].append(novo_risco)
         st.session_state["fk"] += 1
-        st.session_state["ia_sugestoes"] = []
-
+        
         st.rerun()
 
     st.markdown("---")
