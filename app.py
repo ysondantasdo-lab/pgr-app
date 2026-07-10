@@ -316,6 +316,9 @@ with abas[0]:
         st.session_state["lista_riscos"] = []
     if "fk" not in st.session_state:
         st.session_state["fk"] = 0
+    # ADICIONE ESTA LINHA AQUI:
+    if "indice_em_edicao" not in st.session_state:
+        st.session_state["indice_em_edicao"] = None
 
     st.markdown("### FAIXA 1: Dados Iniciais e Organogramas")
     df_sec_load = load_tabela("Secretaria")
@@ -382,12 +385,57 @@ with abas[0]:
     
     
 
-    # ------------------ RISCOS JÁ ADICIONADOS ------------------
+    # ------------------ RISCOS JÁ ADICIONADOS (COM EDIÇÃO E EXCLUSÃO) ------------------
     if len(st.session_state["lista_riscos"]) > 0:
-        st.markdown("### Riscos Adicionados para Esta Função")
-        df_show = pd.DataFrame(st.session_state["lista_riscos"])
-        cols_show = ["risco", "fator", "medida_existente", "medida_proposta"]
-        st.dataframe(df_show[cols_show] if len(df_show.columns) >= 4 else df_show, use_container_width=True)
+        st.markdown("### 📋 Riscos Adicionados para Esta Função")
+        
+        # Cabeçalho visual das colunas
+        cab1, cab2, cab3, cab4 = st.columns([2, 4, 3, 2])
+        cab1.markdown("**Risco**")
+        cab2.markdown("**Fator / Fonte**")
+        cab3.markdown("**Medida Proposta**")
+        cab4.markdown("**Ações**")
+        st.markdown("---")
+
+        # Varre a lista de riscos invertida para mostrar o mais recente primeiro (opcional)
+        # Usamos o enumerate para saber o índice exato de cada risco na lista do session_state
+        for idx, r in enumerate(st.session_state["lista_riscos"]):
+            # Se o risco foi marcado como excluído em uma lógica futura, pulamos (opcional)
+            col_r1, col_r2, col_r3, col_r4 = st.columns([2, 4, 3, 2])
+            
+            col_r1.write(r.get("risco", "N/A"))
+            col_r2.write(f"**Fator:** {r.get('fator', '')}\n\n**Fonte:** {r.get('fonte_geradora', '')}")
+            col_r3.write(r.get("medida_proposta", r.get("mp", "N/A")))
+            
+            # Botões de ação para este risco específico
+            btn_col1, btn_col2 = col_r4.columns(2)
+            
+            # 1. BOTÃO EDITAR
+            if btn_col1.button("✏️", key=f"edit_risk_{idx}", help="Editar este risco"):
+                # Puxa os dados do risco de volta para os campos do formulário
+                fk_atual = st.session_state["fk"]
+                st.session_state[f"fator_{fk_atual}"] = r.get("fator", "")
+                st.session_state[f"fonte_{fk_atual}"] = r.get("fonte_geradora", "")
+                st.session_state[f"aval_{fk_atual}"] = r.get("avaliacao_quantitativa", "")
+                st.session_state[f"danos_{fk_atual}"] = r.get("danos_saude", "")
+                st.session_state[f"me_{fk_atual}"] = r.get("medida_existente", "")
+                st.session_state[f"mp_{fk_atual}"] = r.get("medida_proposta", "")
+                st.session_state[f"resp_{fk_atual}"] = r.get("responsavel_tecnico", "")
+                st.session_state[f"porc_{fk_atual}"] = r.get("concluido_porcentagem", 0)
+                
+                # Guarda no session_state qual índice estamos editando para sabermos se vamos atualizar ou criar um novo
+                st.session_state["indice_em_edicao"] = idx
+                st.success("Dados carregados no formulário abaixo para alteração!")
+                st.rerun()
+                
+            # 2. BOTÃO EXCLUIR
+            if btn_col2.button("🗑️", key=f"del_risk_{idx}", help="Excluir este risco"):
+                # Remove o risco da lista usando o índice dele
+                st.session_state["lista_riscos"].pop(idx)
+                st.warning("Risco removido da lista temporária.")
+                st.rerun()
+        st.markdown("---")
+        
 
     # ------------------ ENTRADA DO NOVO RISCO ------------------
     st.markdown("---")
