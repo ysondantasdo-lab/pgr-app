@@ -367,11 +367,17 @@ with abas[0]:
             with st.expander(f"💡 Sugestão {idx_ia + 1}: {item_ia.fator_risco}"):
                 st.write(f"**Fonte:** {item_ia.fonte_geradora} | **Danos:** {item_ia.danos_saude}")
                 st.write(f"**Proposta:** {item_ia.medida_proposta}")
+                
                 if st.button("Usar estes dados no formulário abaixo", key=f"btn_ia_{idx_ia}"):
-                    st.session_state[f"fator_{fk}"] = item_ia.fator_risco
-                    st.session_state[f"fonte_{fk}"] = item_ia.fonte_geradora
-                    st.session_state[f"danos_{fk}"] = item_ia.danos_saude
-                    st.session_state[f"mp_{fk}"] = item_ia.medida_proposta
+                    # SEGURANÇA: Captura dinamicamente o fk atualizado neste milissegundo do clique
+                    fk_atual = st.session_state.get("fk", 0)
+                    
+                    # Preenche os campos usando a chave robusta 'fk_atual'
+                    st.session_state[f"fator_{fk_atual}"] = item_ia.fator_risco
+                    st.session_state[f"fonte_{fk_atual}"] = item_ia.fonte_geradora
+                    st.session_state[f"danos_{fk_atual}"] = item_ia.danos_saude
+                    st.session_state[f"mp_{fk_atual}"] = item_ia.medida_proposta
+                    
                     st.rerun()
     
     
