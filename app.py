@@ -329,7 +329,7 @@ with abas[0]:
     
     c3, c4 = st.columns(2)
     op_cargo = df_cargo_load["Nome do Cargo"].tolist() if not df_cargo_load.empty else []
-    cargo_selecionado = c3.selectbox("Cargo Referência", op_cargo)
+    cargo_selecionado = c3.selectbox("Cargo", op_cargo)
     funcao_text = c4.text_input("Função Praticada")
     
     c5, c6 = st.columns(2)
@@ -452,10 +452,10 @@ with abas[0]:
     
     c15, c16 = st.columns(2)
     resp_acao = c15.text_input("Responsável Técnico pela Ação", key=f"resp_{fk}")
-    porc_exec = c16.number_input("Concluído (%)", min_value=0, max_value=100, key=f"porc_{fk}")
+    porc_exec = c16.number_input("Concluído (%)", min_value=0, max_value=100, value=0, step=5, key=f"porc_{fk}")
     c17, c18, c19 = st.columns(3)
-    dt_ini = c17.date_input("Data Inicial", value=Nome, format="DD/MM/YYYY", key=f"dti_{fk}")
-    dt_fim = c18.date_input("Data Limite (Final)", value=Nome, format="DD/MM/YYYY", key=f"dtf_{fk}")
+    dt_ini = c17.date_input("Data Inicial", value=None, format="DD/MM/YYYY", key=f"dti_{fk}")
+    dt_fim = c18.date_input("Data Limite (Final)", value=None, format="DD/MM/YYYY", key=f"dtf_{fk}")
     dt_exec = c19.date_input("Data de Execução", value=None, format="DD/MM/YYYY", key=f"dte_{fk}")
 
     status_acao = st.selectbox("Status", ["Não Iniciado", "Em Andamento", "Atrasado", "Concluído"], key=f"st_{fk}")
