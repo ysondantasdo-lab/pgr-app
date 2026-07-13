@@ -274,8 +274,14 @@ if st.session_state["usuario_perfil"] == "Admin":
     if df_validador.empty:
         sincronizar_tabelas_entidades(is_initial=True)
 
+# Inicializa a aba ativa padrão na memória se o programa acabou de abrir
+if "aba_ativa_nome" not in st.session_state:
+    st.session_state["aba_ativa_nome"] = "Cadastro Interativo"
+
 tabs_gui = ["Cadastro Interativo", "Consulta", "Relatório Completo"]
-abas = st.tabs(tabs_gui)
+
+# Criamos as abas vinculando o controle de estado dinâmico
+abas = st.tabs(tabs_gui, value=st.session_state["aba_ativa_nome"])
 
 if st.session_state["usuario_perfil"] == "Admin":
     st.sidebar.markdown("---")
@@ -309,37 +315,72 @@ def calcula_matriz(peso_p, peso_e):
         imediata = "Não tolerável - Prioridade máxima. Adotar medidas imediatas de controle. Quando não, a continuidade da operação só poderá ocorrer com ciência e aprovação do gerente geral da unidade ou instalação. Iniciar processo de avaliação quantitativa do Setor/GHE para verificação do rebaixamento da categoria de risco."
     return x, nivel, classificacao, imediata
 
-with abas[0]:
-    st.header("📝 Formulário de Mapeamento do PGR (5 Faixas)")
-    
-    if "lista_riscos" not in st.session_state:
-        st.session_state["lista_riscos"] = []
-    if "fk" not in st.session_state:
-        st.session_state["fk"] = 0
-    # ADICIONE ESTA LINHA AQUI:
-    if "indice_em_edicao" not in st.session_state:
-        st.session_state["indice_em_edicao"] = None
+with abas[0]: 
+    st.header("📝 Formulário de Mapeamento do PGR (5 Faixas)") 
+ 
+    if "lista_riscos" not in st.session_state: 
+        st.session_state["lista_riscos"] = [] 
+    if "Ņ" not in st.session_state:
+        st.session_state["Ņ"] = 0
+    if "indice_em_edicao" not in st.session_state: 
+        st.session_state["indice_em_edicao"] = None 
 
-    st.markdown("### FAIXA 1: Dados Iniciais e Organogramas")
-    df_sec_load = load_tabela("Secretaria")
-    df_cargo_load = load_tabela("Cargo")
+    # --- ENGENHARIA DE PREENCHIMENTO AUTOMÁTICO DO CABEÇALHO ---
+    id_alvo_db = st.session_state.get("id_funcao_em_alteracao_db", None)
     
-    c1, c2 = st.columns(2)
-    op_sec = df_sec_load["Nome do Órgão"].tolist() if not df_sec_load.empty else []
-    sec_selecionada = c1.selectbox("Órgão / Secretaria", op_sec)
-    lotacao = c2.text_input("Lotação (Setor/Departamento)")
-    desc_fisica = st.text_input("Descrição Física do Ambiente")
+    # Valores padrão vazios (caso seja um cadastro novo do zero)
+    padrao_sec_idx = 0
+    padrao_cargo_idx = 0
+    padrao_lotacao = ""
+    padrao_desc_fisica = ""
+    padrao_funcao_text = ""
+    padrao_qtd_m = 0
+    padrao_qtd_f = 0
+    padrao_desc_atv = ""
+
+    df_sec_load = load_tabela("Secretaria") 
+    df_cargo_load = load_tabela("Cargo") 
+    op_sec = df_sec_load["Nome do Órgão"].tolist() if not df_sec_load.empty else [] 
+    op_cargo = df_cargo_load["Nome do Cargo"].tolist() if not df_cargo_load.empty else [] 
+
+    # Se viermos de uma edição da Consulta, extraímos os dados históricos fixos do banco
+    if id_alvo_db is not None and 'view_flat' in locals():
+        df_dados_cf = view_flat[view_flat["id_cf"] == id_alvo_db]
+        if not df_dados_cf.empty:
+            linha_funcao = df_dados_cf.iloc[0]
+            
+            # Encontra os índices corretos nos Dropdowns (selectbox)
+            nome_sec_banco = str(linha_funcao.get("Nome do Órgão", ""))
+            nome_cargo_banco = str(linha_funcao.get("Nome do Cargo", ""))
+            if nome_sec_banco in op_sec: padrao_sec_idx = op_sec.index(nome_sec_banco)
+            if nome_cargo_banco in op_cargo: padrao_cargo_idx = op_cargo.index(nome_cargo_banco)
+            
+            # Textos e Números das Faixas
+            padrao_lotacao = str(linha_funcao.get("Lotação", ""))
+            padrao_desc_fisica = str(linha_funcao.get("Descrição Física", ""))
+            padrao_funcao_text = str(linha_funcao.get("Função", ""))
+            padrao_qtd_m = int(linha_funcao.get("Quantidade M", 0)) if pd.notna(linha_funcao.get("Quantidade M")) else 0
+            padrao_qtd_f = int(linha_funcao.get("Quantidade F", 0)) if pd.notna(linha_funcao.get("Quantidade F")) else 0
+            padrao_desc_atv = str(linha_funcao.get("Descrição Atividade", ""))
+
+    # --- EXIBIÇÃO RENDERIZADA DOS CAMPOS DA FAIXA 1 ---
+    st.markdown("### FAIXA 1: Dados Iniciais e Organogramas") 
     
-    c3, c4 = st.columns(2)
-    op_cargo = df_cargo_load["Nome do Cargo"].tolist() if not df_cargo_load.empty else []
-    cargo_selecionado = c3.selectbox("Cargo", op_cargo)
-    funcao_text = c4.text_input("Função Praticada")
-    
-    c5, c6 = st.columns(2)
-    qtd_m = c5.number_input("Quantidade Masc. (M)", min_value=0, step=1)
-    qtd_f = c6.number_input("Quantidade Fem. (F)", min_value=0, step=1)
-    st.info(f"**Total Automático Registrado:** {qtd_m + qtd_f}")
-    desc_atv = st.text_area("Descrição Geral da Atividade (Função)")
+    c1, c2 = st.columns(2) 
+    # Vinculados dinamicamente aos índices padrões calculados
+    sec_selecionada = c1.selectbox("Órgão / Secretaria", op_sec, index=padrao_sec_idx) 
+    lotacao = c2.text_input("Lotação (Setor/Departamento)", value=padrao_lotacao) 
+    desc_fisica = st.text_input("Descrição Física do Ambiente", value=padrao_desc_fisica) 
+ 
+    c3, c4 = st.columns(2) 
+    cargo_selecionado = c3.selectbox("Cargo", op_cargo, index=padrao_cargo_idx) 
+    funcao_text = c4.text_input("Função Praticada", value=padrao_funcao_text) 
+ 
+    c5, c6 = st.columns(2) 
+    qtd_m = c5.number_input("Quantidade Masc. (M)", min_value=0, value=padrao_qtd_m, step=1) 
+    qtd_f = c6.number_input("Quantidade Fem. (F)", min_value=0, value=padrao_qtd_f, step=1) 
+    st.info(f"**Total Automático Registrado:** {qtd_m + qtd_f}") 
+    desc_atv = st.text_area("Descrição Geral da Atividade (Função)", value=padrao_desc_atv)
 
     if "ia_sugestoes" not in st.session_state:
         st.session_state["ia_sugestoes"] = []
@@ -786,24 +827,15 @@ with abas[1]:
                 st.session_state["lista_riscos"] = lista_reconstruida
                 st.session_state["id_funcao_em_alteracao_db"] = id_cf_selecionado
                 
-                # --- SOLUÇÃO DEFINITIVA: INJEÇÃO DE CLIQUE AUTOMÁTICO NA ABA 1 ---
-                # Este script localiza o elemento visual da primeira aba (index 0) e força o clique instantâneo
-                js_clique_aba = """
-                <script>
-                    var selectors = [".stTabs [id^='tabs-bnd-tab-']", "button[id^='tabs-bnd-tab-']", ".stTabs button"];
-                    for (var s = 0; s < selectors.length; s++) {
-                        var tabs = window.parent.document.querySelectorAll(selectors[s]);
-                        if (tabs.length > 0) {
-                            tabs[0].click();
-                            break;
-                        }
-                    }
-                </script>
-                """
-                # Executa o script JavaScript em segundo plano
-                st.components.v1.html(js_clique_aba, height=0)
+                # Altera o nome da aba ativa diretamente no Python (Navegação imediata)
+                st.session_state["aba_ativa_name"] = "Cadastro Interativo"
                 
+                st.success("Registros sincronizados na memória ativa! Redirecionando...")
                 st.rerun()
+
+            
+
+                
                 
             # Ação 2: Ativar modal de segurança para expurgo de dados
             if c_g2.button("🗑️ Excluir Função do Banco de Dados", type="secondary", use_container_width=True, key="btn_c_excluir"):
