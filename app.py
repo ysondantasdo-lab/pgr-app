@@ -752,7 +752,7 @@ with abas[1]:
                 linhas_funcao_reais = filtered_view[filtered_view["id_cf"] == id_cf_selecionado]
                 
                 lista_reconstruida = []
-                for _, r_linha in i_linhas_funcao_reais.iterrows():
+                for _, r_linha in linhas_funcao_reais.iterrows():
                     lista_reconstruida.append({
                         "risco": r_linha.get("Nome Risco", ""),
                         "fator": r_linha.get("Fator de Risco", ""),
