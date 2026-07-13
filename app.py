@@ -662,25 +662,182 @@ with abas[1]:
         m_ri_me = pd.merge(m_lr_ri, df_me, on="id_lr", how="left")
         view_flat = pd.merge(m_ri_me, df_mp, on="id_me", how="left")
         
+                # Criamos as 3 colunas horizontais para os filtros ficarem lado a lado
         c01, c02, c03 = st.columns(3)
-        op_f_orgao = ["Todos"] + list(view_flat["Nome do Órgão"].dropna().unique())
-        f_o = c01.selectbox("Filtro: Órgão (Secretaria)", op_f_orgao)
+
+        # --- FILTRO 1: ÓRGÃO / SECRETARIA (Fica dentro da coluna c01) ---
+        op_f_orgao = ["Selecione..."] + list(view_flat["Nome do Órgão"].dropna().unique())
+        f_o = c01.selectbox("Filtro 1: Órgão (Secretaria)", op_f_orgao, key="filtro_c_sec")
         
-        op_f_carg = ["Todos"] + list(view_flat["Nome do Cargo"].dropna().unique())
-        f_c = c02.selectbox("Filtro: Cargo", op_f_carg)
+        # Inicializamos as variáveis para evitar erros de leitura nos passos seguintes
+        f_c = "Selecione..."
+        f_f = "Selecione..."
         
-        op_f_fun = ["Todos"] + list(view_flat["Função"].dropna().unique())
-        f_f = c03.selectbox("Filtro: Função Executada", op_f_fun)
+        # Só exibe o Filtro 2 se o usuário escolher uma Secretaria válida
+        if f_o != "Selecione...":
+            view_filtrada_sec = view_flat[view_flat["Nome do Órgão"] == f_o]
+            
+            # --- FILTRO 2: CARGO (Fica dentro da coluna c02) ---
+            op_f_carg = ["Selecione..."] + list(view_filtrada_sec["Nome do Cargo"].dropna().unique())
+            f_c = c02.selectbox("Filtro 2: Cargo", op_f_carg, key="filtro_c_cargo")
+            
+            # Só exibe o Filtro 3 se o usuário escolher um Cargo válido
+            if f_c != "Selecione...":
+                view_filtrada_cargo = view_filtrada_sec[view_filtrada_sec["Nome do Cargo"] == f_c]
+                
+                # --- FILTRO 3: FUNÇÃO EXECUTADA (Fica dentro da coluna c03) ---
+                op_f_fun = ["Selecione..."] + [
+                    f"{int(row['id_cf'])} - {row['Função']}" 
+                    for _, row in view_filtrada_cargo.drop_duplicates(subset=['id_cf']).iterrows() 
+                    if pd.notna(row['Função'])
+                ]
+                f_f = c03.selectbox("Filtro 3: Função Executada", op_f_fun, key="filtro_c_funcao")
         
+        # --- APLICAÇÃO DOS FILTROS NA PLANILHA ---
         filtered_view = view_flat.copy()
-        if f_o != "Todos": filtered_view = filtered_view[filtered_view["Nome do Órgão"] == f_o]
-        if f_c != "Todos": filtered_view = filtered_view[filtered_view["Nome do Cargo"] == f_c]
-        if f_f != "Todos": filtered_view = filtered_view[filtered_view["Função"] == f_f]
         
-        st.dataframe(filtered_view, use_container_width=True)
-        st.info("💡 As atualizações afetam diretamente as seleções mostradas aqui.")
+        if f_o != "Selecione...": 
+            filtered_view = filtered_view[filtered_view["Nome do Órgão"] == f_o]
+        if f_c != "Selecione...": 
+            filtered_view = filtered_view[filtered_view["Nome do Cargo"] == f_c]
+            
+        if f_f != "Selecione...":
+            # Extrai o ID numérico da função escolhida no selectbox
+            id_cf_selecionado = int(f_f.split(" - ")[0])
+            filtered_view = filtered_view[filtered_view["id_cf"] == id_cf_selecionado]
+            
+            st.success(f"✅ Prontuário da Função ID {id_cf_selecionado} localizado com sucesso!")
+            
+            # 1. Captura com segurança a primeira linha da função para montar o cabeçalho (Faixa 1)
+            linha_base = filtered_view[filtered_view["id_cf"] == id_cf_selecionado].iloc[0]
+            
+            st.markdown("### 📋 Informações Gerais da Função (Faixa 1)")
+            
+            # Layout espelhado idêntico ao Cadastro Interativo utilizando CSS para clareza visual
+            st.html("<style>textarea:disabled, input:disabled { color: black !important; -webkit-text-fill-color: black !important; }</style>")
+            
+            c_v1, c_v2 = st.columns(2)
+            c_v1.text_input("Órgão / Secretaria", value=str(linha_base.get("Nome do Órgão", "")), disabled=True, key="c_v_sec")
+            c_v2.text_input("Lotação (Setor/Departamento)", value=str(linha_base.get("Lotação", "")), disabled=True, key="c_v_lot")
+            st.text_input("Descrição Física do Ambiente", value=str(linha_base.get("Descrição Física", "")), disabled=True, key="c_v_desc")
+            
+            c_v3, c_v4 = st.columns(2)
+            c_v3.text_input("Cargo Referência", value=str(linha_base.get("Nome do Cargo", "")), disabled=True, key="c_v_cargo")
+            c_v4.text_input("Função Praticada", value=str(linha_base.get("Função", "")), disabled=True, key="c_v_fun")
+            
+            c_v5, c_v6 = st.columns(2)
+            c_v5.text_input("Quantidade Masc. (M)", value=str(linha_base.get("Quantidade M", "0")), disabled=True, key="c_v_qm")
+            c_v6.text_input("Quantidade Fem. (F)", value=str(linha_base.get("Quantidade F", "0")), disabled=True, key="c_v_qf")
+            
+            st.text_area("Descrição Geral da Atividade (Função)", value=str(linha_base.get("Descrição Atividade", "")), disabled=True, key="c_v_atv")
+            
+            # --- APRESENTAÇÃO COMPACTA DE RISCOS ---
+            st.markdown("### ⚡ Riscos Ocupacionais Mapeados (Faixas 2, 3, 4 e 5)")
+            
+            # Extrai apenas as colunas amigáveis de riscos sem redundâncias de IDs numéricos
+            colunas_pgr = ["Nome Risco", "Fator de Risco", "Fonte Geradora", "Medida Existente", "Medida Proposta", "Status"]
+            colunas_validas = [c for c in colunas_pgr if c in filtered_view.columns]
+            df_riscos_bloco = filtered_view[filtered_view["id_cf"] == id_cf_selecionado][colunas_validas].drop_duplicates()
+            
+            st.dataframe(df_riscos_bloco, use_container_width=True)
+            
+            # --- SISTEMA DE GESTÃO DIRETIVA (BOTÕES) ---
+            st.markdown("---")
+            c_g1, c_g2 = st.columns(2)
+            
+            # Ação 1: Despachar dados brutos para edição na ABA 1
+            if c_g1.button("✏️ Editar Registro no Cadastro", type="primary", use_container_width=True, key="btn_c_editar"):
+                st.info("Transferindo registros históricos para a memória ativa...")
+                # Captura todas as ocorrências de riscos mapeados para reinjetar na lista temporária da Aba 1
+                linhas_funcao_reais = filtered_view[filtered_view["id_cf"] == id_cf_selecionado]
+                
+                lista_reconstruida = []
+                for _, r_linha in i_linhas_funcao_reais.iterrows():
+                    lista_reconstruida.append({
+                        "risco": r_linha.get("Nome Risco", ""),
+                        "fator": r_linha.get("Fator de Risco", ""),
+                        "fonte": r_linha.get("Fonte Geradora", ""),
+                        "aval": r_linha.get("Avaliação Quantitativa", ""),
+                        "danos": r_linha.get("Danos à Saúde", ""),
+                        "expo": r_linha.get("Nome Exposição", ""),
+                        "medida_existente": r_linha.get("Medida Existente", ""),
+                        "epi": r_linha.get("EPI EFICAZ", ""),
+                        "epc": r_linha.get("EPC EFICAZ", ""),
+                        "prob_atual": f"{r_linha.get('Peso Probabilidade', '1')} - {r_linha.get('Nome Probabilidade', '')}",
+                        "efeito_atual": f"{r_linha.get('Peso Efeito', '1')} - {r_linha.get('Nome Efeito', '')}",
+                        "val_x_atual": r_linha.get("Nível", 1),
+                        "class_atual": r_linha.get("Classificação", ""),
+                        "medida_proposta": r_linha.get("Medida Proposta", ""),
+                        "tmp_sel": r_linha.get("Nome Tipo Medida Proposta", ""),
+                        "prob_prop": f"{r_linha.get('Peso Probabilidade', '1')} - {r_linha.get('Nome Probabilidade', '')}", # aproximado por segurança
+                        "efeito_prop": f"{r_linha.get('Peso Efeito', '1')} - {r_linha.get('Nome Efeito', '')}",
+                        "val_x_prop": r_linha.get("Nível", 1),
+                        "class_prop": r_linha.get("Classificação", ""),
+                        "imediata": r_linha.get("Imediata", ""),
+                        "resp_acao": r_linha.get("Responsável", ""),
+                        "porc_exec": int(r_linha.get("Porcentagem", 0)) if pd.notna(r_linha.get("Porcentagem")) else 0,
+                        "dt_ini": r_linha.get("Data Início", ""),
+                        "dt_fim": r_linha.get("Data Final", ""),
+                        "dt_exec": r_linha.get("Data Execução", ""),
+                        "status_acao": r_linha.get("Status", "Não Iniciado")
+                    })
+                
+                # Alimenta o estado da Aba 1 para "acordar" preenchida
+                st.session_state["lista_riscos"] = lista_reconstruida
+                st.session_state["id_funcao_em_alteracao_db"] = id_cf_selecionado
+                st.success("Registros sincronizados na memória ativa! Vá para a aba 'Cadastro Interativo' para prosseguir.")
+                st.rerun()
+                
+            # Ação 2: Ativar modal de segurança para expurgo de dados
+            if c_g2.button("🗑️ Excluir Função do Banco de Dados", type="secondary", use_container_width=True, key="btn_c_excluir"):
+                st.session_state["confirmar_exclusao_id_cf"] = id_cf_selecionado
+                st.rerun()
+
+            # Caixa de verificação física para evitar deleção acidental por cliques errados
+            if st.session_state.get("confirmar_exclusao_id_cf", None) == id_cf_selecionado:
+                st.error(f"⚠️ **CONFIRMAÇÃO CRÍTICA:** Deseja expurgar a Função ID {id_cf_selecionado} e TODOS os riscos acoplados permanentemente do Google Drive?")
+                c_ex1, c_ex2 = st.columns(2)
+                
+                if c_ex1.button("Sim, Excluir Definitivamente", type="primary", use_container_width=True, key="btn_c_confirma_sim"):
+                    # Carrega as tabelas cruas diretamente do Google Drive para expurgar as referências cruzadas
+                    df_cf_cru = load_tabela("Cargo_Funcao")
+                    df_lr_cru = load_tabela("Lotacao_Risco")
+                    df_me_cru = load_tabela("Risco_Medida_Existente")
+                    df_mp_cru = load_tabela("Risco_Medida_Proposta")
+                    
+                    # 1. Localiza os IDs secundários (chaves estrangeiras) que pertencem a essa função exclusiva
+                    ids_lr_alvo = df_lr_cru[df_lr_cru["Id_Cargo_Func"] == id_cf_selecionado]["Id_Lotação_Risco"].tolist()
+                    ids_me_alvo = df_me_cru[df_me_cru["Id_Lotação_Risco"].isin(ids_lr_alvo)]["Id_Risco_Med_Existente"].tolist()
+                    
+                    # 2. Executa a filtragem reversa (Mantém apenas o que NÃO pertence à função deletada)
+                    df_mp_novo = df_mp_cru[~df_mp_cru["Id_Risco_Med_Existente"].isin(ids_me_alvo)]
+                    df_me_novo = df_me_cru[~df_me_cru["Id_Risco_Med_Existente"].isin(ids_me_alvo)]
+                    df_lr_novo = df_lr_cru[~df_lr_cru["Id_Lotação_Risco"].isin(ids_lr_alvo)]
+                    df_cf_novo = df_cf_cru[df_cf_cru["Id_Cargo_Func"] != id_cf_selecionado]
+                    
+                    # 3. Salva em cascata as tabelas limpas de volta para a nuvem
+                    save_tabela("Risco_Medida_Proposta", df_mp_novo)
+                    save_tabela("Risco_Medida_Existente", df_me_novo)
+                    save_tabela("Lotacao_Risco", df_lr_novo)
+                    save_tabela("Cargo_Funcao", df_cf_novo)
+                    
+                    # Reseta os gatilhos e atualiza a aplicação
+                    st.session_state["confirmar_exclusao_id_cf"] = None
+                    st.success("🚀 Registro removido com sucesso e tabelas limpas na Nuvem!")
+                    st.rerun()
+                    
+                if c_ex2.button("Cancelar Operação", use_container_width=True, key="btn_c_confirma_nao"):
+                    st.session_state["confirmar_exclusao_id_cf"] = None
+                    st.rerun()
+
+        else: 
+            # Se nenhuma função específica foi selecionada ainda, mostra a tabela filtrada até o momento
+            st.dataframe(filtered_view, use_container_width=True) 
+            st.info("💡 Filtre até o nível de 'Função Executada' para abrir as opções de Edição e Exclusão.")
+            
     except Exception as e:
         st.warning(f"Banco de dados insuficiente para montagem da visualização. Detalhe: {e}")
+
 
 # ==============================================================================
 # ABA 3: RELATÓRIO DO PGR E MÓDULO ODT
