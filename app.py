@@ -520,9 +520,17 @@ with abas[0]:
     status_opcoes = ["Não Iniciado", "Em Andamento", "Concluído", "Atrasado"]
     status_sel = st.selectbox("Status", status_opcoes, key=f"status_{fk}")
 
+
+
     
     # BOTÃO PARA ADICIONAR RISCO
-    if st.button("➕ Adicionar Este Risco", use_container_width=True):
+    # Detecta se há uma edição ativa para mudar o nome do botão dinamicamente
+    idx_edicao = st.session_state.get("indice_em_edicao", None)
+    texto_botao = "💾 Atualizar Risco Editado" if idx_edicao is not None else "➕ Adicionar Este Risco"
+    
+    
+    
+    if st.button(texto_botao, use_container_width=True):
         novo_risco = {
             "risco": risco_selecionado,
             "fator": fator_risco,
@@ -552,8 +560,18 @@ with abas[0]:
 
             "status_acao": status_sel
         }
-        st.session_state["lista_riscos"].append(novo_risco)
-        st.session_state["fk"] += 1
+
+        
+        if idx_edicao is not None:
+            # 📝 MODO EDIÇÃO: Substitui na mesma posição da lista antiga
+            st.session_state["lista_riscos"][idx_edicao] = novo_risco
+            st.session_state["indice_em_edicao"] = None  # Reseta o estado para livre
+            st.success("Risco alterado com sucesso!")
+        else:
+            # ➕ MODO NOVO: Insere no final da lista normalmente
+            st.session_state["lista_riscos"].append(novo_risco)
+            st.session_state["fk"] += 1
+            st.success("Risco inserido com sucesso!")
         
         st.rerun()
 
