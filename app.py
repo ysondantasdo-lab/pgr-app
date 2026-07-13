@@ -550,7 +550,7 @@ with abas[0]:
             "dt_fim": dt_fim.strftime("%d/%m/%Y") if dt_fim else "",
             "dt_exec": dt_exec.strftime("%d/%m/%Y") if dt_exec else "",
 
-            "status_acao": status_acao
+            "status_acao": status_sel
         }
         st.session_state["lista_riscos"].append(novo_risco)
         st.session_state["fk"] += 1
