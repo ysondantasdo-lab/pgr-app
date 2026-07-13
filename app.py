@@ -496,12 +496,15 @@ with abas[0]:
     st.markdown("##### FAIXA 5: Acompanhamento de Execução")
     
     # Substituição cirúrgica: sai st.info e entra st.text_area expansível
-    
+   
+    # Este comando força o navegador a desenhar o campo desativado com letras escuras e nítidas
+    st.html("<style>textarea:disabled { color: black !important; -webkit-text-fill-color: black !important; cursor: default !important; }</style>")
+
     st.text_area(
         label="👉 Imediata (Preenchimento Automático):",
         value=imediata_prop,
         height=100,          # Altura inicial confortável
-        read_only=True,      # CORREÇÃO: Bloqueia a digitação mas mantém o visual 100% nítido
+        disabled=True,      # CORREÇÃO: Bloqueia a digitação mas mantém o visual 100% nítido
         key=f"imediata_show_{fk}"
     )
     
