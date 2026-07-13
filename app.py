@@ -404,8 +404,8 @@ with abas[0]:
             col_r1, col_r2, col_r3, col_r4 = st.columns([2, 4, 3, 2])
             
             col_r1.write(r.get("risco", "N/A"))
-            col_r2.write(f"**Fator:** {r.get('fator', '')}\n\n**Fonte:** {r.get('fonte_geradora', '')}")
-            col_r3.write(r.get("medida_proposta", r.get("mp", "N/A")))
+            col_r2.write(f"**Fator:** {r.get('fator', '')}\n\n**Fonte:** {r.get('fonte', '')}")
+            col_r3.write(r.get("medida_proposta", "N/A"))
             
             # Botões de ação para este risco específico
             btn_col1, btn_col2 = col_r4.columns(2)
@@ -415,13 +415,13 @@ with abas[0]:
                 # Puxa os dados do risco de volta para os campos do formulário
                 fk_atual = st.session_state["fk"]
                 st.session_state[f"fator_{fk_atual}"] = r.get("fator", "")
-                st.session_state[f"fonte_{fk_atual}"] = r.get("fonte_geradora", "")
-                st.session_state[f"aval_{fk_atual}"] = r.get("avaliacao_quantitativa", "")
-                st.session_state[f"danos_{fk_atual}"] = r.get("danos_saude", "")
+                st.session_state[f"fonte_{fk_atual}"] = r.get("fonte", "")
+                st.session_state[f"aval_{fk_atual}"] = r.get("aval", "")
+                st.session_state[f"danos_{fk_atual}"] = r.get("danos", "")
                 st.session_state[f"me_{fk_atual}"] = r.get("medida_existente", "")
                 st.session_state[f"mp_{fk_atual}"] = r.get("medida_proposta", "")
-                st.session_state[f"resp_{fk_atual}"] = r.get("responsavel_tecnico", "")
-                st.session_state[f"porc_{fk_atual}"] = r.get("concluido_porcentagem", 0)
+                st.session_state[f"resp_{fk_atual}"] = r.get("resp_acao", "")
+                st.session_state[f"porc_{fk_atual}"] = r.get("proc_exec", 0)
                 
                 # Guarda no session_state qual índice estamos editando para sabermos se vamos atualizar ou criar um novo
                 st.session_state["indice_em_edicao"] = idx
