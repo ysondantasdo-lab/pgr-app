@@ -785,7 +785,24 @@ with abas[1]:
                 # Alimenta o estado da Aba 1 para "acordar" preenchida
                 st.session_state["lista_riscos"] = lista_reconstruida
                 st.session_state["id_funcao_em_alteracao_db"] = id_cf_selecionado
-                st.success("Registros sincronizados na memória ativa! Vá para a aba 'Cadastro Interativo' para prosseguir.")
+                
+                # --- SOLUÇÃO DEFINITIVA: INJEÇÃO DE CLIQUE AUTOMÁTICO NA ABA 1 ---
+                # Este script localiza o elemento visual da primeira aba (index 0) e força o clique instantâneo
+                js_clique_aba = """
+                <script>
+                    var selectors = [".stTabs [id^='tabs-bnd-tab-']", "button[id^='tabs-bnd-tab-']", ".stTabs button"];
+                    for (var s = 0; s < selectors.length; s++) {
+                        var tabs = window.parent.document.querySelectorAll(selectors[s]);
+                        if (tabs.length > 0) {
+                            tabs[0].click();
+                            break;
+                        }
+                    }
+                </script>
+                """
+                # Executa o script JavaScript em segundo plano
+                st.components.v1.html(js_clique_aba, height=0)
+                
                 st.rerun()
                 
             # Ação 2: Ativar modal de segurança para expurgo de dados
