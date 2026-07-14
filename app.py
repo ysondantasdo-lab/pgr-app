@@ -625,12 +625,14 @@ if aba_selecionada == "Cadastro Interativo":
             "imediata": imediata_prop,
             "resp_acao": resp_acao,
             "porc_exec": porc_exec,
-            from datetime import datetime as dt
-            def _parse_data(s):
-                try:
-                    return dt.strptime(s, "%d/%m/%Y").date()
-                except Exception:
-                    return None
+            
+            
+        from datetime import datetime as dt
+        def _parse_data(s):
+            try:
+                return dt.strptime(s, "%d/%m/%Y").date()
+            except Exception:
+                return None
             st.session_state[f"dti_{n_atual}"] = _parse_data(r.get("dt_ini", ""))
             st.session_state[f"dtf_{n_atual}"] = _parse_data(r.get("dt_fim", ""))
             st.session_state[f"dte_{n_atual}"] = _parse_data(r.get("dt_exec", ""))
