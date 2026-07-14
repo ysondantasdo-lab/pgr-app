@@ -139,7 +139,8 @@ def save_tabela(nome, df):
     sh = gc.open_by_key(DB_SHEET_ID)
     worksheet = sh.worksheet(nome)
     worksheet.clear()
-    worksheet.update([df.columns.values.tolist()] + df.values.astype(str).tolist())
+    df_limpo = df.fillna("").astype(str)
+    worksheet.update([df_limpo.columns.values.tolist()] + df_limpo.values.tolist())
     load_tabela.clear()
 
 def proximo_id(df, col_pk):
@@ -280,8 +281,16 @@ if "aba_ativa_nome" not in st.session_state:
 
 tabs_gui = ["Cadastro Interativo", "Consulta", "Relatório Completo"]
 
-# Criamos as abas vinculando o controle de estado dinâmico
-abas = st.tabs(tabs_gui, value=st.session_state["aba_ativa_nome"])
+aba_selecionada = st.radio(
+    "Navegação",
+    tabs_gui,
+    index=tabs_gui.index(st.session_state["aba_ativa_nome"]),
+    horizontal=True,
+    label_visibility="collapsed",
+    key="radio_nav_abas"
+)
+st.session_state["aba_ativa_nome"] = aba_selecionada
+st.markdown("---")
 
 if st.session_state["usuario_perfil"] == "Admin":
     st.sidebar.markdown("---")
@@ -315,11 +324,16 @@ def calcula_matriz(peso_p, peso_e):
         imediata = "Não tolerável - Prioridade máxima. Adotar medidas imediatas de controle. Quando não, a continuidade da operação só poderá ocorrer com ciência e aprovação do gerente geral da unidade ou instalação. Iniciar processo de avaliação quantitativa do Setor/GHE para verificação do rebaixamento da categoria de risco."
     return x, nivel, classificacao, imediata
 
-with abas[0]: 
+if aba_selecionada == "Cadastro Interativo":
+    ...  # conteúdo que estava em abas[0] 
     st.header("📝 Formulário de Mapeamento do PGR (5 Faixas)") 
  
     if "lista_riscos" not in st.session_state: 
-        st.session_state["lista_riscos"] = [] 
+        st.session_state["lista_riscos"] = []
+        st.session_state["id_funcao_em_alteracao_db"] = None
+        st.session_state["indice_em_edicao"] = None
+        st.success("Dados encadeados salvos com sucesso no Google Drive.")
+        st.rerun()
     if "Ņ" not in st.session_state:
         st.session_state["Ņ"] = 0
     if "indice_em_edicao" not in st.session_state: 
@@ -344,24 +358,30 @@ with abas[0]:
     op_cargo = df_cargo_load["Nome do Cargo"].tolist() if not df_cargo_load.empty else [] 
 
     # Se viermos de uma edição da Consulta, extraímos os dados históricos fixos do banco
-    if id_alvo_db is not None and 'view_flat' in locals():
-        df_dados_cf = view_flat[view_flat["id_cf"] == id_alvo_db]
-        if not df_dados_cf.empty:
-            linha_funcao = df_dados_cf.iloc[0]
-            
-            # Encontra os índices corretos nos Dropdowns (selectbox)
-            nome_sec_banco = str(linha_funcao.get("Nome do Órgão", ""))
-            nome_cargo_banco = str(linha_funcao.get("Nome do Cargo", ""))
-            if nome_sec_banco in op_sec: padrao_sec_idx = op_sec.index(nome_sec_banco)
-            if nome_cargo_banco in op_cargo: padrao_cargo_idx = op_cargo.index(nome_cargo_banco)
-            
-            # Textos e Números das Faixas
-            padrao_lotacao = str(linha_funcao.get("Lotação", ""))
-            padrao_desc_fisica = str(linha_funcao.get("Descrição Física", ""))
-            padrao_funcao_text = str(linha_funcao.get("Função", ""))
-            padrao_qtd_m = int(linha_funcao.get("Quantidade M", 0)) if pd.notna(linha_funcao.get("Quantidade M")) else 0
-            padrao_qtd_f = int(linha_funcao.get("Quantidade F", 0)) if pd.notna(linha_funcao.get("Quantidade F")) else 0
-            padrao_desc_atv = str(linha_funcao.get("Descrição Atividade", ""))
+    if id_alvo_db is not None:
+    df_cf_atual = load_tabela("Cargo_Funcao")
+    df_sl_atual = load_tabela("Secretaria_Lotacao")
+    df_sec_atual = load_tabela("Secretaria")
+    df_cargo_atual = load_tabela("Cargo")
+
+    linha_cf = df_cf_atual[df_cf_atual["Id_Cargo_Func"] == id_alvo_db]
+    if not linha_cf.empty:
+        linha_cf = linha_cf.iloc[0]
+        linha_sl = df_sl_atual[df_sl_atual["Id_Sec_Lotação"] == linha_cf["Id_Sec_Lotação"]].iloc[0]
+        linha_sec = df_sec_atual[df_sec_atual["Id_Secretaria"] == linha_sl["Id_Secretaria"]].iloc[0]
+        linha_cargo = df_cargo_atual[df_cargo_atual["Id_Cargo"] == linha_cf["Id_Cargo"]].iloc[0]
+
+        nome_sec_banco = str(linha_sec.get("Nome do Órgão", ""))
+        nome_cargo_banco = str(linha_cargo.get("Nome do Cargo", ""))
+        if nome_sec_banco in op_sec: padrao_sec_idx = op_sec.index(nome_sec_banco)
+        if nome_cargo_banco in op_cargo: padrao_cargo_idx = op_cargo.index(nome_cargo_banco)
+
+        padrao_lotacao = str(linha_sl.get("Lotação", ""))
+        padrao_desc_fisica = str(linha_sl.get("Descrição Física", ""))
+        padrao_funcao_text = str(linha_cf.get("Função", ""))
+        padrao_qtd_m = int(linha_cf.get("Quantidade M", 0)) if pd.notna(linha_cf.get("Quantidade M")) else 0
+        padrao_qtd_f = int(linha_cf.get("Quantidade F", 0)) if pd.notna(linha_cf.get("Quantidade F")) else 0
+        padrao_desc_atv = str(linha_cf.get("Descrição Atividade", ""))
 
     # --- EXIBIÇÃO RENDERIZADA DOS CAMPOS DA FAIXA 1 ---
     st.markdown("### FAIXA 1: Dados Iniciais e Organogramas") 
@@ -453,17 +473,27 @@ with abas[0]:
             
             # 1. BOTÃO EDITAR
             if btn_col1.button("✏️", key=f"edit_risk_{idx}", help="Editar este risco"):
-                # Puxa os dados do risco de volta para os campos do formulário
-                fk_atual = st.session_state["fk"]
-                st.session_state[f"fator_{fk_atual}"] = r.get("fator", "")
-                st.session_state[f"fonte_{fk_atual}"] = r.get("fonte", "")
-                st.session_state[f"aval_{fk_atual}"] = r.get("aval", "")
-                st.session_state[f"danos_{fk_atual}"] = r.get("danos", "")
-                st.session_state[f"me_{fk_atual}"] = r.get("medida_existente", "")
-                st.session_state[f"mp_{fk_atual}"] = r.get("medida_proposta", "")
-                st.session_state[f"resp_{fk_atual}"] = r.get("resp_acao", "")
-                st.session_state[f"porc_{fk_atual}"] = r.get("proc_exec", 0)
-                
+                n_atual = st.session_state["n"]
+                st.session_state[f"risco_{n_atual}"] = r.get("risco", "")
+                st.session_state[f"fator_{n_atual}"] = r.get("fator", "")
+                st.session_state[f"fonte_{n_atual}"] = r.get("fonte", "")
+                st.session_state[f"aval_{n_atual}"] = r.get("aval", "")
+                st.session_state[f"danos_{n_atual}"] = r.get("danos", "")
+                st.session_state[f"expo_{n_atual}"] = r.get("expo", "")
+                st.session_state[f"me_{n_atual}"] = r.get("medida_existente", "")
+                st.session_state[f"epi_{n_atual}"] = r.get("epi", "")
+                st.session_state[f"epc_{n_atual}"] = r.get("epc", "")
+                st.session_state[f"pa_{n_atual}"] = r.get("prob_atual", "")
+                st.session_state[f"ea_{n_atual}"] = r.get("efeito_atual", "")
+                st.session_state[f"mp_{n_atual}"] = r.get("medida_proposta", "")
+                st.session_state[f"tmp_{n_atual}"] = r.get("tmp_sel", "")
+                st.session_state[f"pp_{n_atual}"] = r.get("prob_prop", "")
+                st.session_state[f"ep_{n_atual}"] = r.get("efeito_prop", "")
+                st.session_state[f"resp_{n_atual}"] = r.get("resp_acao", "")
+                st.session_state[f"porc_{n_atual}"] = r.get("porc_exec", 0)
+                st.session_state[f"status_{n_atual}"] = r.get("status_acao", "Não Iniciado")
+
+                   
                 # Guarda no session_state qual índice estamos editando para sabermos se vamos atualizar ou criar um novo
                 st.session_state["indice_em_edicao"] = idx
                 st.success("Dados carregados no formulário abaixo para alteração!")
@@ -595,9 +625,16 @@ with abas[0]:
             "imediata": imediata_prop,
             "resp_acao": resp_acao,
             "porc_exec": porc_exec,
-            "dt_ini": dt_ini.strftime("%d/%m/%Y") if dt_ini else "",
-            "dt_fim": dt_fim.strftime("%d/%m/%Y") if dt_fim else "",
-            "dt_exec": dt_exec.strftime("%d/%m/%Y") if dt_exec else "",
+            from datetime import datetime as dt
+            def _parse_data(s):
+                try:
+                    return dt.strptime(s, "%d/%m/%Y").date()
+                except Exception:
+                    return None
+            st.session_state[f"dti_{n_atual}"] = _parse_data(r.get("dt_ini", ""))
+            st.session_state[f"dtf_{n_atual}"] = _parse_data(r.get("dt_fim", ""))
+            st.session_state[f"dte_{n_atual}"] = _parse_data(r.get("dt_exec", ""))
+
 
             "status_acao": status_sel
         }
@@ -680,7 +717,9 @@ with abas[0]:
 # ==============================================================================
 # ABA 2: CONSULTA DE DADOS + FILTROS CUMULATIVOS
 # ==============================================================================
-with abas[1]:
+if aba_selecionada == "Consulta":
+    ...  # conteúdo que estava em abas[1]
+    
     st.header("🔍 Painel de Filtros Avançados")
     # Join em memoria para formar view de usuario
     try:
@@ -828,7 +867,7 @@ with abas[1]:
                 st.session_state["id_funcao_em_alteracao_db"] = id_cf_selecionado
                 
                 # Altera o nome da aba ativa diretamente no Python (Navegação imediata)
-                st.session_state["aba_ativa_name"] = "Cadastro Interativo"
+                st.session_state["aba_ativa_nome"] = "Cadastro Interativo"
                 
                 st.success("Registros sincronizados na memória ativa! Redirecionando...")
                 st.rerun()
@@ -891,7 +930,9 @@ with abas[1]:
 # ==============================================================================
 # ABA 3: RELATÓRIO DO PGR E MÓDULO ODT
 # ==============================================================================
-with abas[2]:
+
+if aba_selecionada == "Relatório Completo":
+    ...  # conteúdo que estava em abas[2]
     st.header("🗄️ Relatorização Consolidadada e Motor PDF")
     
     st.subheader("Equipe Técnica do SESMT")
