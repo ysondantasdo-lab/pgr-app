@@ -359,10 +359,10 @@ if aba_selecionada == "Cadastro Interativo":
 
     # Se viermos de uma edição da Consulta, extraímos os dados históricos fixos do banco
     if id_alvo_db is not None:
-    df_cf_atual = load_tabela("Cargo_Funcao")
-    df_sl_atual = load_tabela("Secretaria_Lotacao")
-    df_sec_atual = load_tabela("Secretaria")
-    df_cargo_atual = load_tabela("Cargo")
+        df_cf_atual = load_tabela("Cargo_Funcao")
+        df_sl_atual = load_tabela("Secretaria_Lotacao")
+        df_sec_atual = load_tabela("Secretaria")
+        df_cargo_atual = load_tabela("Cargo")
 
     linha_cf = df_cf_atual[df_cf_atual["Id_Cargo_Func"] == id_alvo_db]
     if not linha_cf.empty:
