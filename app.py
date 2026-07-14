@@ -493,6 +493,16 @@ if aba_selecionada == "Cadastro Interativo":
                 st.session_state[f"porc_{n_atual}"] = r.get("porc_exec", 0)
                 st.session_state[f"status_{n_atual}"] = r.get("status_acao", "Não Iniciado")
 
+                from datetime import datetime as dt
+                def _parse_data(s):
+                    try:
+                        return dt.strptime(s, "%d/%m/%Y").date()
+                    except Exception:
+                        return None
+                st.session_state[f"dti_{n_atual}"] = _parse_data(r.get("dt_ini", ""))
+                st.session_state[f"dtf_{n_atual}"] = _parse_data(r.get("dt_fim", ""))
+                st.session_state[f"dte_{n_atual}"] = _parse_data(r.get("dt_exec", ""))
+
                    
                 # Guarda no session_state qual índice estamos editando para sabermos se vamos atualizar ou criar um novo
                 st.session_state["indice_em_edicao"] = idx
@@ -625,22 +635,13 @@ if aba_selecionada == "Cadastro Interativo":
             "imediata": imediata_prop,
             "resp_acao": resp_acao,
             "porc_exec": porc_exec,
-            
-            
-        from datetime import datetime as dt
-        def _parse_data(s):
-            try:
-                return dt.strptime(s, "%d/%m/%Y").date()
-            except Exception:
-                return None
-            st.session_state[f"dti_{n_atual}"] = _parse_data(r.get("dt_ini", ""))
-            st.session_state[f"dtf_{n_atual}"] = _parse_data(r.get("dt_fim", ""))
-            st.session_state[f"dte_{n_atual}"] = _parse_data(r.get("dt_exec", ""))
-
-
+            "dt_ini": dt_ini.strftime("%d/%m/%Y") if dt_ini else "",
+            "dt_fim": dt_fim.strftime("%d/%m/%Y") if dt_fim else "",
+            "dt_exec": dt_exec.strftime("%d/%m/%Y") if dt_exec else "",
             "status_acao": status_sel
         }
-
+          
+        
         
         if idx_edicao is not None:
             # 📝 MODO EDIÇÃO: Substitui na mesma posição da lista antiga
