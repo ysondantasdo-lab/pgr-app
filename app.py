@@ -364,24 +364,24 @@ if aba_selecionada == "Cadastro Interativo":
         df_sec_atual = load_tabela("Secretaria")
         df_cargo_atual = load_tabela("Cargo")
 
-    linha_cf = df_cf_atual[df_cf_atual["Id_Cargo_Func"] == id_alvo_db]
-    if not linha_cf.empty:
-        linha_cf = linha_cf.iloc[0]
-        linha_sl = df_sl_atual[df_sl_atual["Id_Sec_Lotação"] == linha_cf["Id_Sec_Lotação"]].iloc[0]
-        linha_sec = df_sec_atual[df_sec_atual["Id_Secretaria"] == linha_sl["Id_Secretaria"]].iloc[0]
-        linha_cargo = df_cargo_atual[df_cargo_atual["Id_Cargo"] == linha_cf["Id_Cargo"]].iloc[0]
+        linha_cf = df_cf_atual[df_cf_atual["Id_Cargo_Func"] == id_alvo_db]
+        if not linha_cf.empty:
+            linha_cf = linha_cf.iloc[0]
+            linha_sl = df_sl_atual[df_sl_atual["Id_Sec_Lotação"] == linha_cf["Id_Sec_Lotação"]].iloc[0]
+            linha_sec = df_sec_atual[df_sec_atual["Id_Secretaria"] == linha_sl["Id_Secretaria"]].iloc[0]
+            linha_cargo = df_cargo_atual[df_cargo_atual["Id_Cargo"] == linha_cf["Id_Cargo"]].iloc[0]
 
-        nome_sec_banco = str(linha_sec.get("Nome do Órgão", ""))
-        nome_cargo_banco = str(linha_cargo.get("Nome do Cargo", ""))
-        if nome_sec_banco in op_sec: padrao_sec_idx = op_sec.index(nome_sec_banco)
-        if nome_cargo_banco in op_cargo: padrao_cargo_idx = op_cargo.index(nome_cargo_banco)
+            nome_sec_banco = str(linha_sec.get("Nome do Órgão", ""))
+            nome_cargo_banco = str(linha_cargo.get("Nome do Cargo", ""))
+            if nome_sec_banco in op_sec: padrao_sec_idx = op_sec.index(nome_sec_banco)
+            if nome_cargo_banco in op_cargo: padrao_cargo_idx = op_cargo.index(nome_cargo_banco)
 
-        padrao_lotacao = str(linha_sl.get("Lotação", ""))
-        padrao_desc_fisica = str(linha_sl.get("Descrição Física", ""))
-        padrao_funcao_text = str(linha_cf.get("Função", ""))
-        padrao_qtd_m = int(linha_cf.get("Quantidade M", 0)) if pd.notna(linha_cf.get("Quantidade M")) else 0
-        padrao_qtd_f = int(linha_cf.get("Quantidade F", 0)) if pd.notna(linha_cf.get("Quantidade F")) else 0
-        padrao_desc_atv = str(linha_cf.get("Descrição Atividade", ""))
+            padrao_lotacao = str(linha_sl.get("Lotação", ""))
+            padrao_desc_fisica = str(linha_sl.get("Descrição Física", ""))
+            padrao_funcao_text = str(linha_cf.get("Função", ""))
+            padrao_qtd_m = int(linha_cf.get("Quantidade M", 0)) if pd.notna(linha_cf.get("Quantidade M")) else 0
+            padrao_qtd_f = int(linha_cf.get("Quantidade F", 0)) if pd.notna(linha_cf.get("Quantidade F")) else 0
+            padrao_desc_atv = str(linha_cf.get("Descrição Atividade", ""))
 
     # --- EXIBIÇÃO RENDERIZADA DOS CAMPOS DA FAIXA 1 ---
     st.markdown("### FAIXA 1: Dados Iniciais e Organogramas") 
@@ -473,7 +473,7 @@ if aba_selecionada == "Cadastro Interativo":
             
             # 1. BOTÃO EDITAR
             if btn_col1.button("✏️", key=f"edit_risk_{idx}", help="Editar este risco"):
-                n_atual = st.session_state["n"]
+                n_atual = st.session_state["fk",0]
                 st.session_state[f"risco_{n_atual}"] = r.get("risco", "")
                 st.session_state[f"fator_{n_atual}"] = r.get("fator", "")
                 st.session_state[f"fonte_{n_atual}"] = r.get("fonte", "")
@@ -521,7 +521,7 @@ if aba_selecionada == "Cadastro Interativo":
     # ------------------ ENTRADA DO NOVO RISCO ------------------
     st.markdown("---")
     st.markdown("#### ADICIONAR NOVO RISCO À FUNÇÃO")
-    fk = st.session_state["fk"]
+    fk = st.session_state.get("fk",0)
 
     st.markdown("##### FAIXA 2: Identificação do Risco")
     df_risco_load = load_tabela("Riscos_Ambientais")
