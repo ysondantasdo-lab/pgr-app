@@ -335,7 +335,7 @@ if aba_selecionada == "Cadastro Interativo":
         st.success("Dados encadeados salvos com sucesso no Google Drive.")
         st.rerun()
     if "Ņ" not in st.session_state:
-        st.session_state["Ņ"] = 0
+        st.session_state["N"] = 0
     if "indice_em_edicao" not in st.session_state: 
         st.session_state["indice_em_edicao"] = None 
 
@@ -659,63 +659,92 @@ if aba_selecionada == "Cadastro Interativo":
     st.markdown("---")
 
     # SALVAMENTO EM BANCO
-    if st.button("✅ Salvar Cadastro Geral na Nuvem (Função + Riscos)"):
-        if len(st.session_state["lista_riscos"]) == 0:
-            st.error("Adicione pelo menos um risco antes de salvar!")
-        else:
+    if st.button("💾 Salvar Cadastro Geral na Nuvem (Função + Riscos)"):
+    if len(st.session_state["lista_riscos"]) == 0:
+        st.error("Adicione pelo menos um risco antes de salvar!")
+    else:
+        try:
+            id_sec = df_sec_load[df_sec_load["Nome do Órgão"] == sec_selecionada].iloc[0]["Id_Secretaria"]
+            id_cargo = df_cargo_load[df_cargo_load["Nome do Cargo"] == cargo_selecionado].iloc[0]["Id_Cargo"]
+
+            # --- FASE 1: SNAPSHOT DO ESTADO ORIGINAL (antes de qualquer alteração em memória) ---
+            df_sl = load_tabela("Secretaria_Lotacao")
+            df_sl_original = df_sl.copy()
+            id_sl = proximo_id(df_sl, "Id_Sec_Lotação")
+
+            df_cf = load_tabela("Cargo_Funcao")
+            df_cf_original = df_cf.copy()
+            id_cf = proximo_id(df_cf, "Id_Cargo_Func")
+
+            df_lr = load_tabela("Lotacao_Risco")
+            df_lr_original = df_lr.copy()
+            df_me = load_tabela("Risco_Medida_Existente")
+            df_me_original = df_me.copy()
+            df_mp = load_tabela("Risco_Medida_Proposta")
+            df_mp_original = df_mp.copy()
+
+            # --- FASE 2: VALIDAÇÃO TOTAL EM MEMÓRIA (nenhum lookup falho grava nada) ---
+            linhas_lr, linhas_me, linhas_mp = [], [], []
+            for ri in st.session_state["lista_riscos"]:
+                id_risco = df_risco_load[df_risco_load["Nome Risco"] == ri["risco"]].iloc[0]["Id_Risco"]
+                id_expo = df_exp[df_exp["Nome Exposição"] == ri["expo"]].iloc[0]["Id_Exposição"]
+                p_atual_peso = int(str(ri["prob_atual"]).split(" - ")[0])
+                e_atual_peso = int(str(ri["efeito_atual"]).split(" - ")[0])
+                p_prop_peso = int(str(ri["prob_prop"]).split(" - ")[0])
+                e_prop_peso = int(str(ri["efeito_prop"]).split(" - ")[0])
+                id_prob_at = df_prob[df_prob["Peso Probabilidade"] == p_atual_peso].iloc[0]["Id_Probabilidade"]
+                id_ef_at = df_efeito[df_efeito["Peso Efeito"] == e_atual_peso].iloc[0]["Id_Efeito"]
+                id_prob_pr = df_prob[df_prob["Peso Probabilidade"] == p_prop_peso].iloc[0]["Id_Probabilidade"]
+                id_ef_pr = df_efeito[df_efeito["Peso Efeito"] == e_prop_peso].iloc[0]["Id_Efeito"]
+
+                id_lr = proximo_id(df_lr, "Id_Lotação_Risco") + len(linhas_lr)
+                linhas_lr.append([id_lr, id_sl, id_cf, id_risco, ri["fator"], ri["fonte"], ri["aval"], ri["danos"], id_expo])
+
+                id_me = proximo_id(df_me, "Id_Risco_Med_Existente") + len(linhas_me)
+                linhas_me.append([id_me, id_lr, ri["medida_existente"], ri["epi"], ri["epc"], id_prob_at, id_ef_at, ri["val_x_atual"], ri["class_atual"]])
+
+                id_mp = proximo_id(df_mp, "Id_Risco_Med_Proposta") + len(linhas_mp)
+                linhas_mp.append([id_mp, id_me, ri["medida_proposta"], id_prob_pr, id_ef_pr, ri["val_x_prop"], ri["class_prop"], ri["imediata"], ri["resp_acao"], ri["dt_ini"], ri["dt_fim"], ri["status_acao"], ri["porc_exec"], ri["dt_exec"]])
+
+            # --- FASE 3: GRAVAÇÃO NA NUVEM, COM ROLLBACK PELO SNAPSHOT ORIGINAL ---
+            tabelas_gravadas = []
             try:
-                id_sec = df_sec_load[df_sec_load["Nome do Órgão"] == sec_selecionada].iloc[0]["Id_Secretaria"]
-                id_cargo = df_cargo_load[df_cargo_load["Nome do Cargo"] == cargo_selecionado].iloc[0]["Id_Cargo"]
-                
-                # 1. Sec_Lotacao
-                df_sl = load_tabela("Secretaria_Lotacao")
-                id_sl = proximo_id(df_sl, "Id_Sec_Lotação")
                 df_sl.loc[len(df_sl)] = [id_sl, id_sec, lotacao, desc_fisica]
                 save_tabela("Secretaria_Lotacao", df_sl)
-                
-                # 2. Cargo_Funcao
-                df_cf = load_tabela("Cargo_Funcao")
-                id_cf = proximo_id(df_cf, "Id_Cargo_Func")
-                df_cf.loc[len(df_cf)] = [id_cf, id_sl, id_cargo, funcao_text, desc_atv, qtd_m, qtd_f, qtd_m+qtd_f]
+                tabelas_gravadas.append(("Secretaria_Lotacao", df_sl_original))
+
+                df_cf.loc[len(df_cf)] = [id_cf, id_sl, id_cargo, funcao_text, desc_atv, qtd_m, qtd_f, qtd_m + qtd_f]
                 save_tabela("Cargo_Funcao", df_cf)
-                
-                # Loop Riscos
-                df_lr = load_tabela("Lotacao_Risco")
-                df_me = load_tabela("Risco_Medida_Existente")
-                df_mp = load_tabela("Risco_Medida_Proposta")
+                tabelas_gravadas.append(("Cargo_Funcao", df_cf_original))
 
-                for ri in st.session_state["lista_riscos"]:
-                    id_risco = df_risco_load[df_risco_load["Nome Risco"] == ri["risco"]].iloc[0]["Id_Risco"]
-                    id_expo = df_exp[df_exp["Nome Exposição"] == ri["expo"]].iloc[0]["Id_Exposição"]
-                    
-                    p_atual_peso = int(str(ri["prob_atual"]).split(" - ")[0])
-                    e_atual_peso = int(str(ri["efeito_atual"]).split(" - ")[0])
-                    p_prop_peso = int(str(ri["prob_prop"]).split(" - ")[0])
-                    e_prop_peso = int(str(ri["efeito_prop"]).split(" - ")[0])
-
-                    id_prob_at = df_prob[df_prob["Peso Probabilidade"] == p_atual_peso].iloc[0]["Id_Probabilidade"]
-                    id_ef_at = df_efeito[df_efeito["Peso Efeito"] == e_atual_peso].iloc[0]["Id_Efeito"]
-                    id_prob_pr = df_prob[df_prob["Peso Probabilidade"] == p_prop_peso].iloc[0]["Id_Probabilidade"]
-                    id_ef_pr = df_efeito[df_efeito["Peso Efeito"] == e_prop_peso].iloc[0]["Id_Efeito"]
-                    
-                    id_lr = proximo_id(df_lr, "Id_Lotação_Risco")
-                    df_lr.loc[len(df_lr)] = [id_lr, id_sl, id_cf, id_risco, ri["fator"], ri["fonte"], ri["aval"], ri["danos"], id_expo]
-                    
-                    id_me = proximo_id(df_me, "Id_Risco_Med_Existente")
-                    df_me.loc[len(df_me)] = [id_me, id_lr, ri["medida_existente"], ri["epi"], ri["epc"], id_prob_at, id_ef_at, ri["val_x_atual"], ri["class_atual"]]
-                    
-                    id_mp = proximo_id(df_mp, "Id_Risco_Med_Proposta")
-                    df_mp.loc[len(df_mp)] = [id_mp, id_me, ri["medida_proposta"], id_prob_pr, id_ef_pr, ri["val_x_prop"], ri["class_prop"], ri["imediata"], ri["resp_acao"], ri["dt_ini"], ri["dt_fim"], ri["status_acao"], ri["porc_exec"], ri["dt_exec"]]
-
+                for linha in linhas_lr:
+                    df_lr.loc[len(df_lr)] = linha
                 save_tabela("Lotacao_Risco", df_lr)
+                tabelas_gravadas.append(("Lotacao_Risco", df_lr_original))
+
+                for linha in linhas_me:
+                    df_me.loc[len(df_me)] = linha
                 save_tabela("Risco_Medida_Existente", df_me)
+                tabelas_gravadas.append(("Risco_Medida_Existente", df_me_original))
+
+                for linha in linhas_mp:
+                    df_mp.loc[len(df_mp)] = linha
                 save_tabela("Risco_Medida_Proposta", df_mp)
-                
+
                 st.session_state["lista_riscos"] = []
                 st.success("Dados encadeados salvos com sucesso no Google Drive.")
                 st.rerun()
-            except Exception as ex:
-                st.error(f"Erro ao salvar relações: {ex}")
+
+            except Exception as erro_gravacao:
+                for nome_tabela, df_estado_anterior in reversed(tabelas_gravadas):
+                    try:
+                        save_tabela(nome_tabela, df_estado_anterior)
+                    except Exception:
+                        pass
+                st.error(f"Falha ao salvar — alterações revertidas para manter consistência. Detalhe: {erro_gravacao}")
+
+        except Exception as ex:
+            st.error(f"Erro ao preparar dados: {ex}")
 
 # ==============================================================================
 # ABA 2: CONSULTA DE DADOS + FILTROS CUMULATIVOS
