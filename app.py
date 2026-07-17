@@ -325,7 +325,7 @@ def calcula_matriz(peso_p, peso_e):
     return x, nivel, classificacao, imediata
 
 if aba_selecionada == "Cadastro Interativo":
-    ...  # conteúdo que estava em abas[0] 
+    # ... conteúdo que estava em abas[0] 
     st.header("📝 Formulário de Mapeamento do PGR (5 Faixas)") 
  
     if "lista_riscos" not in st.session_state: 
