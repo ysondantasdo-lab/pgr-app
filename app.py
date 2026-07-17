@@ -674,7 +674,7 @@ if aba_selecionada == "Cadastro Interativo":
 
                 df_cf = load_tabela("Cargo_Funcao")
                 df_cf_original = df_cf.copy()
-               id_cf = proximo_id(df_cf, "Id_Cargo_Func")
+                id_cf = proximo_id(df_cf, "Id_Cargo_Func")
 
                 df_lr = load_tabela("Lotacao_Risco")
                 df_lr_original = df_lr.copy()
