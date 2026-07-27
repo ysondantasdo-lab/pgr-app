@@ -102,6 +102,9 @@ if st.sidebar.button("Encerrar Sessão"):
     st.session_state["usuario_perfil"] = None
     st.rerun()
 
+if "fk" not in st.session_state:
+    st.session_state["fk"] = 0
+
 # ------------------------------------------------------------------------------
 # 2. MODELAGEM DO BANCO DE DADOS (Helpers via Google Sheets API)
 # ------------------------------------------------------------------------------
@@ -334,7 +337,7 @@ if aba_selecionada == "Cadastro Interativo":
         st.session_state["indice_em_edicao"] = None
         st.success("Dados encadeados salvos com sucesso no Google Drive.")
         st.rerun()
-    if "Ņ" not in st.session_state:
+    if "N" not in st.session_state:
         st.session_state["N"] = 0
     if "indice_em_edicao" not in st.session_state: 
         st.session_state["indice_em_edicao"] = None 
@@ -473,7 +476,7 @@ if aba_selecionada == "Cadastro Interativo":
             
             # 1. BOTÃO EDITAR
             if btn_col1.button("✏️", key=f"edit_risk_{idx}", help="Editar este risco"):
-                n_atual = st.session_state["fk",0]
+                n_atual = st.session_state.get("fk", 0)
                 st.session_state[f"risco_{n_atual}"] = r.get("risco", "")
                 st.session_state[f"fator_{n_atual}"] = r.get("fator", "")
                 st.session_state[f"fonte_{n_atual}"] = r.get("fonte", "")
