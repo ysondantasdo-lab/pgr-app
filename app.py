@@ -336,7 +336,7 @@ if aba_selecionada == "Cadastro Interativo":
         st.session_state["id_funcao_em_alteracao_db"] = None
         st.session_state["indice_em_edicao"] = None
         st.success("Dados encadeados salvos com sucesso no Google Drive.")
-        st.rerun()
+        
     if "N" not in st.session_state:
         st.session_state["N"] = 0
     if "indice_em_edicao" not in st.session_state: 
@@ -387,7 +387,7 @@ if aba_selecionada == "Cadastro Interativo":
             padrao_desc_atv = str(linha_cf.get("Descrição Atividade", ""))
 
     # --- EXIBIÇÃO RENDERIZADA DOS CAMPOS DA FAIXA 1 ---
-    st.markdown("### FAIXA 1: Dados Iniciais e Organogramas") 
+    st.markdown("### FAIXA 1: Dados Iniciais do Órgão/Secretaria") 
     
     c1, c2 = st.columns(2) 
     # Vinculados dinamicamente aos índices padrões calculados
@@ -397,12 +397,12 @@ if aba_selecionada == "Cadastro Interativo":
  
     c3, c4 = st.columns(2) 
     cargo_selecionado = c3.selectbox("Cargo", op_cargo, index=padrao_cargo_idx) 
-    funcao_text = c4.text_input("Função Praticada", value=padrao_funcao_text) 
+    funcao_text = c4.text_input("Função Exercida", value=padrao_funcao_text) 
  
     c5, c6 = st.columns(2) 
     qtd_m = c5.number_input("Quantidade Masc. (M)", min_value=0, value=padrao_qtd_m, step=1) 
     qtd_f = c6.number_input("Quantidade Fem. (F)", min_value=0, value=padrao_qtd_f, step=1) 
-    st.info(f"**Total Automático Registrado:** {qtd_m + qtd_f}") 
+    st.info(f"**Total de Pessoas:** {qtd_m + qtd_f}") 
     desc_atv = st.text_area("Descrição Geral da Atividade (Função)", value=padrao_desc_atv)
 
     if "ia_sugestoes" not in st.session_state:
@@ -529,7 +529,7 @@ if aba_selecionada == "Cadastro Interativo":
     st.markdown("##### FAIXA 2: Identificação do Risco")
     df_risco_load = load_tabela("Riscos_Ambientais")
     op_risco = df_risco_load["Nome Risco"].tolist() if not df_risco_load.empty else []
-    risco_selecionado = st.selectbox("Risco Ambiental", op_risco, key=f"risco_{fk}")
+    risco_selecionado = st.selectbox("Risco Ambiental(Tipo de Risco)", op_risco, key=f"risco_{fk}")
     
     c7, c8 = st.columns(2)
     fator_risco = c7.text_input("Fator de Risco", key=f"fator_{fk}")
@@ -560,29 +560,39 @@ if aba_selecionada == "Cadastro Interativo":
     peso_e_atual = int(str(efeito_atual_sel).split(" - ")[0])
     
     val_x_atual, niv_atual, class_atual, _ = calcula_matriz(peso_p_atual, peso_e_atual)
-    st.warning(f"**Cálculo Automático Matriz Atual:** Valor {val_x_atual} -> Nível '{niv_atual}' / Classificação '{class_atual}'")
+    st.warning(f"**Cálculo Automático Matriz Multiplicação Probabilidade x Efeito:** Valor {val_x_atual} -> Nível Calculado '{niv_atual}' / Classificação Calculada '{class_atual}'")
     
     st.markdown("##### FAIXA 4: Plano de Ação (Medidas Propostas)")
     med_prop = st.text_area("Descreva as Medidas Propostas", key=f"mp_{fk}")
     df_tm_prop = load_tabela("Tipo_Medida_Proposta")
     op_tmp = df_tm_prop["Nome Tipo Medida Proposta"].tolist() if not df_tm_prop.empty else []
-    tmp_sel = st.selectbox("Classificação da Medida Proposta", op_tmp, key=f"tmp_{fk}")
+    tmp_sel = st.selectbox("Tipo de Medida Proposta", op_tmp, key=f"tmp_{fk}")
     
     c13, c14 = st.columns(2)
-    prob_prop_sel = c13.selectbox("Probabilidade Esperada (Proposta)", op_prb, key=f"pp_{fk}")
-    efeito_prop_sel = c14.selectbox("Efeito Esperado (Proposta)", op_ef, key=f"ep_{fk}")
+    prob_prop_sel = c13.selectbox("Probabilidade Esperada (Após Medida Proposta)", op_prb, key=f"pp_{fk}")
+    efeito_prop_sel = c14.selectbox("Efeito Esperado (Após Medida Proposta)", op_ef, key=f"ep_{fk}")
     peso_p_prop = int(str(prob_prop_sel).split(" - ")[0])
     peso_e_prop = int(str(efeito_prop_sel).split(" - ")[0])
     
     val_x_prop, niv_prop, class_prop, imediata_prop = calcula_matriz(peso_p_prop, peso_e_prop)
-    st.success(f"**Matriz Proposta:** Valor {val_x_prop} -> Nível '{niv_prop}' / Classificação '{class_prop}'")
+    st.success(f"**Cálculo Automático Matriz Multiplicação Probabilidade x Efeito Após Medida Proposta:** Valor {val_x_prop} -> Nível Calculado '{niv_prop}' / Classificação Calculada '{class_prop}'")
     
     st.markdown("##### FAIXA 5: Acompanhamento de Execução")
     
     # Substituição cirúrgica: sai st.info e entra st.text_area expansível
    
     # Este comando força o navegador a desenhar o campo desativado com letras escuras e nítidas
-    st.html("<style>textarea:disabled { color: black !important; -webkit-text-fill-color: black !important; cursor: default !important; }</style>")
+    st.html("""
+        <style>
+        textarea:disabled, 
+        div[data-testid="stWidgetLabel"] p,
+        label[data-disabled="true"] p { 
+            color: black !important; 
+            -webkit-text-fill-color: black !important; 
+            cursor: default !important; 
+        }
+    </style>
+    """)
 
     st.text_area(
         label="👉 Imediata (Preenchimento Automático):",
@@ -992,10 +1002,10 @@ if aba_selecionada == "Relatório Completo":
                 try:
                     sec_dados = df_sec[df_sec["Nome do Órgão"] == sec_selecionada_relatorio].iloc[0]
                     id_ss = sec_dados["Id_Secretaria"]
-                    df2 = load_tabela("Secretaria_Lotacao")
-                    df3 = load_tabela("Cargo_Funcao")
-                    lotes = df2[df2["Id_Secretaria"] == id_ss]["Id_Sec_Lotação"].tolist()
-                    total_mf_calc = df3[df3["Id_Sec_Lotação"].isin(lotes)]["TOTAL"].sum()
+                    df_rel_lotacao = load_tabela("Secretaria_Lotacao")
+                    df_rel_cargo_funcao = load_tabela("Cargo_Funcao")
+                    lotes = df_rel_lotacao[df_rel_lotacao["Id_Secretaria"] == id_ss]["Id_Sec_Lotação"].tolist()
+                    total_mf_calc = df_rel_cargo_funcao[df_rel_cargo_funcao["Id_Sec_Lotação"].isin(lotes)]["TOTAL"].sum()
                     
                     hj = datetime.date.today()
                     tag_data = f"{hj.month}/{hj.year} a {hj.month}/{hj.year + 2}"
