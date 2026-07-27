@@ -584,9 +584,8 @@ if aba_selecionada == "Cadastro Interativo":
     # Este comando força o navegador a desenhar o campo desativado com letras escuras e nítidas
     st.html("""
         <style>
-        textarea:disabled, 
-        div[data-testid="stWidgetLabel"] p,
-        label[data-disabled="true"] p { 
+        textarea:disabled,       
+        .stTextArea label { 
             color: black !important; 
             -webkit-text-fill-color: black !important; 
             cursor: default !important; 
