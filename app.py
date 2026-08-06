@@ -786,7 +786,7 @@ if aba_selecionada == "Cadastro Interativo":
                     tabelas_gravadas.append(("Risco_Medida_Existente", df_me_original))
 
                     for linha in linhas_mp:
-                        _mp.loc[len(df_mp)] = linha
+                        df_mp.loc[len(df_mp)] = linha
                     save_tabela("Risco_Medida_Proposta", df_mp)
 
                     # --- PREPARA O AMBIENTE PARA O PRÓXIMO LANÇAMENTO ---
