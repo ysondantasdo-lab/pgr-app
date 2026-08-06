@@ -144,7 +144,7 @@ def save_tabela(nome, df):
     worksheet.clear()
     df_limpo = df.fillna("").astype(str)
     worksheet.update([df_limpo.columns.values.tolist()] + df_limpo.values.tolist())
-    load_tabela.clear()
+    
 
 def proximo_id(df, col_pk):
     if df.empty: return 1
@@ -328,6 +328,19 @@ def calcula_matriz(peso_p, peso_e):
     return x, nivel, classificacao, imediata
 
 if aba_selecionada == "Cadastro Interativo":
+    # --- ATIVAÇÃO DA MENSAGEM FLUTUANTE E RESET DE EDICÃO ---
+    if st.session_state.get("cadastro_salvo_sucesso", False):
+        st.toast("✅ Cadastro Geral do PGR salvo com sucesso na Nuvem!", icon="💾")
+        st.session_state["cadastro_salvo_sucesso"] = False
+        if "id_funcao_em_alteracao_db" in st.session_state:
+            st.session_state["id_funcao_em_alteracao_db"] = None
+
+    #... conteúdo que estava em abas[0]
+    st.header(" Formulário de Mapeamento do PGR (5 Faixas)")
+
+
+
+    
     # ... conteúdo que estava em abas[0] 
     st.header("📝 Formulário de Mapeamento do PGR (5 Faixas)") 
  
@@ -343,17 +356,29 @@ if aba_selecionada == "Cadastro Interativo":
         st.session_state["indice_em_edicao"] = None 
 
     # --- ENGENHARIA DE PREENCHIMENTO AUTOMÁTICO DO CABEÇALHO ---
+    #--- ENGENHARIA DE PREENCHIMENTO AUTOMÁTICO DO CABEÇALHO ---
     id_alvo_db = st.session_state.get("id_funcao_em_alteracao_db", None)
-    
-    # Valores padrão vazios (caso seja um cadastro novo do zero)
-    padrao_sec_idx = 0
-    padrao_cargo_idx = 0
-    padrao_lotacao = ""
-    padrao_desc_fisica = ""
-    padrao_funcao_text = ""
-    padrao_qtd_m = 0
-    padrao_qtd_f = 0
-    padrao_desc_atv = ""
+
+    # Se for um cadastro novo (ou pós-salvamento), preserva a estrutura e limpa a função
+    if id_alvo_db is None:
+        padrao_sec_idx = st.session_state.get("ultimo_sec_idx", 0)
+        padrao_cargo_idx = 0
+        padrao_lotacao = st.session_state.get("ultimo_setor_digitado", "")
+        padrao_desc_fisica = st.session_state.get("ultima_desc_fisica_digitada", "")
+        padrao_funcao_text = ""
+        padrao_qtd_m = 0
+        padrao_qtd_f = 0
+        padrao_desc_atv = ""
+    else:
+        padrao_sec_idx = 0
+        padrao_cargo_idx = 0
+        padrao_lotacao = ""
+        padrao_desc_fisica = ""
+        padrao_funcao_text = ""
+        padrao_qtd_m = 0
+        padrao_qtd_f = 0
+        padrao_desc_atv = ""
+
 
     df_sec_load = load_tabela("Secretaria") 
     df_cargo_load = load_tabela("Cargo") 
@@ -391,9 +416,16 @@ if aba_selecionada == "Cadastro Interativo":
     
     c1, c2 = st.columns(2) 
     # Vinculados dinamicamente aos índices padrões calculados
-    sec_selecionada = c1.selectbox("Órgão / Secretaria", op_sec, index=padrao_sec_idx) 
-    lotacao = c2.text_input("Lotação (Setor/Departamento)", value=padrao_lotacao) 
-    desc_fisica = st.text_input("Descrição Física do Ambiente", value=padrao_desc_fisica) 
+    sec_selecionada = c1.selectbox("Órgão / Secretaria", op_sec, index=padrao_sec_idx)
+    lotacao = c2.text_input("Lotação (Setor/Departamento)", value=padrao_lotacao)
+    desc_fisica = st.text_input("Descrição Física do Ambiente", value=padrao_desc_fisica)
+
+    # --- SALVA O ESTADO ATUAL PARA REUTILIZAÇÃO ---
+    if op_sec and sec_selecionada in op_sec:
+        st.session_state["ultimo_sec_idx"] = op_sec.index(sec_selecionada)
+    st.session_state["ultimo_setor_digitado"] = lotacao
+    st.session_state["ultima_desc_fisica_digitada"] = desc_fisica
+ 
  
     c3, c4 = st.columns(2) 
     cargo_selecionado = c3.selectbox("Cargo", op_cargo, index=padrao_cargo_idx) 
@@ -696,19 +728,32 @@ if aba_selecionada == "Cadastro Interativo":
                 df_mp_original = df_mp.copy()
 
                 # --- FASE 2: VALIDAÇÃO TOTAL EM MEMÓRIA (nenhum lookup falho grava nada) ---
+               
+                # Criamos mapas na memória RAM antes de entrar no laço. A busca fica instantânea!
+                mapa_riscos = dict(zip(df_risco_load["Nome Risco"], df_risco_load["Id_Risco"]))
+                mapa_expo = dict(zip(df_exp["Nome Exposição"], df_exp["Id_Exposição"]))
+                mapa_prob = dict(zip(df_prob["Peso Probabilidade"], df_prob["Id_Probabilidade"]))
+                mapa_efeito = dict(zip(df_efeito["Peso Efeito"], df_efeito["Id_Efeito"]))
+
                 linhas_lr, linhas_me, linhas_mp = [], [], []
                 for ri in st.session_state["lista_riscos"]:
-                    id_risco = df_risco_load[df_risco_load["Nome Risco"] == ri["risco"]].iloc[0]["Id_Risco"]
-                    id_expo = df_exp[df_exp["Nome Exposição"] == ri["expo"]].iloc[0]["Id_Exposição"]
+                    # CORREÇÃO: Busca direta nos mapas de memória RAM (Velocidade máxima)
+                    id_risco = mapa_riscos.get(ri["risco"])
+                    id_expo = mapa_expo.get(ri["expo"])
+                    
+                    # Quebra os textos para isolar os pesos numéricos
                     p_atual_peso = int(str(ri["prob_atual"]).split(" - ")[0])
                     e_atual_peso = int(str(ri["efeito_atual"]).split(" - ")[0])
                     p_prop_peso = int(str(ri["prob_prop"]).split(" - ")[0])
                     e_prop_peso = int(str(ri["efeito_prop"]).split(" - ")[0])
-                    id_prob_at = df_prob[df_prob["Peso Probabilidade"] == p_atual_peso].iloc[0]["Id_Probabilidade"]
-                    id_ef_at = df_efeito[df_efeito["Peso Efeito"] == e_atual_peso].iloc[0]["Id_Efeito"]
-                    id_prob_pr = df_prob[df_prob["Peso Probabilidade"] == p_prop_peso].iloc[0]["Id_Probabilidade"]
-                    id_ef_pr = df_efeito[df_efeito["Peso Efeito"] == e_prop_peso].iloc[0]["Id_Efeito"]
+                    
+                    # CORREÇÃO: Busca os IDs das probabilidades e efeitos direto nos mapas
+                    id_prob_at = mapa_prob.get(p_atual_peso)
+                    id_ef_at = mapa_efeito.get(e_atual_peso)
+                    id_prob_pr = mapa_prob.get(p_prop_peso)
+                    id_ef_pr = mapa_efeito.get(e_prop_peso)
 
+                    # O restante do laço mantém a estrutura original de montagem das listas
                     id_lr = proximo_id(df_lr, "Id_Lotação_Risco") + len(linhas_lr)
                     linhas_lr.append([id_lr, id_sl, id_cf, id_risco, ri["fator"], ri["fonte"], ri["aval"], ri["danos"], id_expo])
 
@@ -719,6 +764,7 @@ if aba_selecionada == "Cadastro Interativo":
                     linhas_mp.append([id_mp, id_me, ri["medida_proposta"], id_prob_pr, id_ef_pr, ri["val_x_prop"], ri["class_prop"], ri["imediata"], ri["resp_acao"], ri["dt_ini"], ri["dt_fim"], ri["status_acao"], ri["porc_exec"], ri["dt_exec"]])
 
                 # --- FASE 3: GRAVAÇÃO NA NUVEM, COM ROLLBACK PELO SNAPSHOT ORIGINAL ---
+
                 tabelas_gravadas = []
                 try:
                     df_sl.loc[len(df_sl)] = [id_sl, id_sec, lotacao, desc_fisica]
@@ -740,12 +786,14 @@ if aba_selecionada == "Cadastro Interativo":
                     tabelas_gravadas.append(("Risco_Medida_Existente", df_me_original))
 
                     for linha in linhas_mp:
-                        df_mp.loc[len(df_mp)] = linha
+                        _mp.loc[len(df_mp)] = linha
                     save_tabela("Risco_Medida_Proposta", df_mp)
 
+                    # --- PREPARA O AMBIENTE PARA O PRÓXIMO LANÇAMENTO ---
                     st.session_state["lista_riscos"] = []
-                    st.success("Dados encadeados salvos com sucesso no Google Drive.")
+                    st.session_state["cadastro_salvo_sucesso"] = True  # Ativa o gatilho da mensagem flutuante
                     st.rerun()
+
 
                 except Exception as erro_gravacao:
                     for nome_tabela, df_estado_anterior in reversed(tabelas_gravadas):
@@ -758,35 +806,44 @@ if aba_selecionada == "Cadastro Interativo":
             except Exception as ex:
                 st.error(f"Erro ao preparar dados: {ex}")
 
+
+# ==============================================================================
+# FUNÇÃO AUXILIAR COM CACHE: Evita reprocessar os Merges a cada clique na tela
+# ==============================================================================
+@st.cache_data(ttl=60)  # Guarda os cruzamentos prontos por 60 segundos na memória RAM
+def gerar_view_consolidada():
+    df1 = load_tabela("Secretaria").rename(columns={"Id_Secretaria": "id_sec"})
+    df2 = load_tabela("Secretaria_Lotacao").rename(columns={"Id_Sec_Lotação": "id_sl", "Id_Secretaria": "id_sec"})
+    df3 = load_tabela("Cargo_Funcao").rename(columns={"Id_Cargo_Func": "id_cf", "Id_Sec_Lotação": "id_sl", "Id_Cargo": "id_c"})
+    df4 = load_tabela("Cargo").rename(columns={"Id_Cargo": "id_c"})
+    df_lr = load_tabela("Lotacao_Risco").rename(columns={"Id_Lotação_Risco": "id_lr", "Id_Cargo_Func": "id_cf", "Id_Risco": "id_risco"})
+    df_risco = load_tabela("Riscos_Ambientais").rename(columns={"Id_Risco": "id_risco"})
+    df_me = load_tabela("Risco_Medida_Existente").rename(columns={"Id_Risco_Med_Existente": "id_me", "Id_Lotação_Risco": "id_lr"})
+    df_mp = load_tabela("Risco_Medida_Proposta").rename(columns={"Id_Risco_Med_Proposta": "id_mp", "Id_Risco_Med_Existente": "id_me"})
+    
+    m_sec_sl = pd.merge(df1, df2, on="id_sec", how="left")
+    m_sl_cf = pd.merge(m_sec_sl, df3, on="id_sl", how="left")
+    m_cf_carg = pd.merge(m_sl_cf, df4, on="id_c", how="left")
+    
+    m_c_lr = pd.merge(m_cf_carg, df_lr, on="id_cf", how="left")
+    m_lr_ri = pd.merge(m_c_lr, df_risco, on="id_risco", how="left")
+    
+    m_ri_me = pd.merge(m_lr_ri, df_me, on="id_lr", how="left")
+    return pd.merge(m_ri_me, df_mp, on="id_me", how="left")
+
+
 # ==============================================================================
 # ABA 2: CONSULTA DE DADOS + FILTROS CUMULATIVOS
 # ==============================================================================
 if aba_selecionada == "Consulta":
-    ...  # conteúdo que estava em abas[1]
-    
     st.header("🔍 Painel de Filtros Avançados")
-    # Join em memoria para formar view de usuario
+    
+    # Recarrega ou consome o cache de forma instantânea
     try:
-        df1 = load_tabela("Secretaria").rename(columns={"Id_Secretaria": "id_sec"})
-        df2 = load_tabela("Secretaria_Lotacao").rename(columns={"Id_Sec_Lotação": "id_sl", "Id_Secretaria": "id_sec"})
-        df3 = load_tabela("Cargo_Funcao").rename(columns={"Id_Cargo_Func": "id_cf", "Id_Sec_Lotação": "id_sl", "Id_Cargo": "id_c"})
-        df4 = load_tabela("Cargo").rename(columns={"Id_Cargo": "id_c"})
-        df_lr = load_tabela("Lotacao_Risco").rename(columns={"Id_Lotação_Risco": "id_lr", "Id_Cargo_Func": "id_cf", "Id_Risco": "id_risco"})
-        df_risco = load_tabela("Riscos_Ambientais").rename(columns={"Id_Risco": "id_risco"})
-        df_me = load_tabela("Risco_Medida_Existente").rename(columns={"Id_Risco_Med_Existente": "id_me", "Id_Lotação_Risco": "id_lr"})
-        df_mp = load_tabela("Risco_Medida_Proposta").rename(columns={"Id_Risco_Med_Proposta": "id_mp", "Id_Risco_Med_Existente": "id_me"})
+        # CORREÇÃO: Puxa a tabela unificada direto da memória RAM sem travar a tela
+        view_flat = gerar_view_consolidada()
         
-        m_sec_sl = pd.merge(df1, df2, on="id_sec", how="left")
-        m_sl_cf = pd.merge(m_sec_sl, df3, on="id_sl", how="left")
-        m_cf_carg = pd.merge(m_sl_cf, df4, on="id_c", how="left")
-        
-        m_c_lr = pd.merge(m_cf_carg, df_lr, on="id_cf", how="left")
-        m_lr_ri = pd.merge(m_c_lr, df_risco, on="id_risco", how="left")
-        
-        m_ri_me = pd.merge(m_lr_ri, df_me, on="id_lr", how="left")
-        view_flat = pd.merge(m_ri_me, df_mp, on="id_me", how="left")
-        
-                # Criamos as 3 colunas horizontais para os filtros ficarem lado a lado
+        # Criamos as 3 colunas horizontais para os filtros ficarem lado a lado
         c01, c02, c03 = st.columns(3)
 
         # --- FILTRO 1: ÓRGÃO / SECRETARIA (Fica dentro da coluna c01) ---
@@ -817,6 +874,8 @@ if aba_selecionada == "Consulta":
                 ]
                 f_f = c03.selectbox("Filtro 3: Função Executada", op_f_fun, key="filtro_c_funcao")
         
+        # --- APLICAÇÃO DOS FILTROS NA PLANILHA ---
+
         # --- APLICAÇÃO DOS FILTROS NA PLANILHA ---
         filtered_view = view_flat.copy()
         
