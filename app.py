@@ -1057,7 +1057,7 @@ if aba_selecionada == "Relatório Completo":
     st.header("🗄️ Relatorização Consolidadada e Motor PDF")
     
     st.subheader("Equipe Técnica do SESMT")
-    df_resp = pd.DataFrame([{"nome": "Nome Exemplo", "matricula": "0000", "funcao": "Cargo", "conselho": "CR Exemplo"}])
+    df_resp = pd.DataFrame([{"nome": "Nome Exemplo", "matricula": "0000", "funcao": "Cargo", "conselho": "Registro"}])
     st.write("Edite os dados na tabela abaixo para inclusão automatizada na página 2 do Relatório .odt:")
     edited_sesmt = st.data_editor(df_resp, num_rows="dynamic", key="sesmt_edit", use_container_width=True)
     
