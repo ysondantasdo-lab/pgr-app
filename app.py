@@ -704,7 +704,17 @@ if aba_selecionada == "Cadastro Interativo":
 
     # SALVAMENTO EM BANCO
     if st.button("💾 Salvar Cadastro Geral na Nuvem (Função + Riscos)"):
-        if len(st.session_state["lista_riscos"]) == 0:
+        campos_faltantes = []
+        if not sec_selecionada:
+            campos_faltantes.append("Nome do Órgão")
+        if not cargo_selecionado:
+            campos_faltantes.append("Nome do Cargo")
+        if not funcao_text or not funcao_text.strip():
+            campos_faltantes.append("Função")
+
+        if campos_faltantes:
+            st.error(f"⚠️ Não é possível salvar. Preencha o(s) campo(s) obrigatório(s): {', '.join(campos_faltantes)}")
+        elif len(st.session_state["lista_riscos"]) == 0:
             st.error("Adicione pelo menos um risco antes de salvar!")
         else:
             try:
@@ -726,6 +736,8 @@ if aba_selecionada == "Cadastro Interativo":
                 df_me_original = df_me.copy()
                 df_mp = load_tabela("Risco_Medida_Proposta")
                 df_mp_original = df_mp.copy()
+            except Exception as ex:
+                st.error(f"Erro ao preparar dados: {ex}")
 
                 # --- FASE 2: VALIDAÇÃO TOTAL EM MEMÓRIA (nenhum lookup falho grava nada) ---
                
@@ -971,6 +983,7 @@ if aba_selecionada == "Consulta":
                 
                 # Altera o nome da aba ativa diretamente no Python (Navegação imediata)
                 st.session_state["aba_ativa_nome"] = "Cadastro Interativo"
+                st.session_state["radio_nav_abas"] = "Cadastro Interativo"  # sincroniza o widget do radio
                 
                 st.success("Registros sincronizados na memória ativa! Redirecionando...")
                 st.rerun()
