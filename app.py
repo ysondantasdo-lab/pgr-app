@@ -13,7 +13,7 @@ import jinja2
 from google import genai
 from pydantic import BaseModel, Field
 from typing import List
-from secretary import Renderer
+
 import traceback
 
 # Estrutura para a Inteligência Artificial do Gemini entregar os dados organizados
@@ -1085,7 +1085,54 @@ if aba_selecionada == "Relatório Completo":
                     
                     hj = datetime.date.today()
                     tag_data = f"{hj.month}/{hj.year} a {hj.month}/{hj.year + 2}"
-                    riscos_faixas = [{"col1": "Exemplo", "col2": "Exemplo", "col3": "Ex", "col4": "Ex", "col5": "Ex", "col6": "Ex"}]
+                    
+                    # Monta uma tabela por Função (todos os campos do Formulário de 5 Faixas)
+                    df_view_rel = gerar_view_consolidada()
+                    df_view_rel = df_view_rel[df_view_rel["id_sec"] == id_ss]
+
+                    riscos_faixas = []
+                    for id_cf_rel in df_view_rel["id_cf"].dropna().unique():
+                        bloco_funcao = df_view_rel[df_view_rel["id_cf"] == id_cf_rel]
+                        cab = bloco_funcao.iloc[0]
+
+                        lista_riscos_funcao = []
+                        for _, rl in bloco_funcao.iterrows():
+                            if pd.isna(rl.get("Nome Risco")):
+                                continue
+                            lista_riscos_funcao.append({
+                                "risco": str(rl.get("Nome Risco", "")),
+                                "fator": str(rl.get("Fator de Risco", "")),
+                                "fonte": str(rl.get("Fonte Geradora", "")),
+                                "aval": str(rl.get("Avaliação Quantitativa", "")),
+                                "danos": str(rl.get("Danos à Saúde", "")),
+                                "expo": str(rl.get("Nome Exposição", "")),
+                                "medida_existente": str(rl.get("Medida Existente", "")),
+                                "epi": str(rl.get("EPI EFICAZ", "")),
+                                "epc": str(rl.get("EPC EFICAZ", "")),
+                                "nivel_atual": str(rl.get("Nível", "")),
+                                "classificacao_atual": str(rl.get("Classificação", "")),
+                                "medida_proposta": str(rl.get("Medida Proposta", "")),
+                                "tipo_medida_proposta": str(rl.get("Nome Tipo Medida Proposta", "")),
+                                "imediata": str(rl.get("Imediata", "")),
+                                "responsavel": str(rl.get("Responsável", "")),
+                                "data_inicio": str(rl.get("Data Início", "")),
+                                "data_final": str(rl.get("Data Final", "")),
+                                "data_execucao": str(rl.get("Data Execução", "")),
+                                "status": str(rl.get("Status", "")),
+                                "porcentagem": str(rl.get("Porcentagem", "")),
+                            })
+                        riscos_faixas.append({
+                            "orgao": str(cab.get("Nome do Órgão", "")),
+                            "lotacao": str(cab.get("Lotação", "")),
+                            "descricao_fisica": str(cab.get("Descrição Física", "")),
+                            "cargo": str(cab.get("Nome do Cargo", "")),
+                            "funcao": str(cab.get("Função", "")),
+                            "qtd_m": str(cab.get("Quantidade M", "")),
+                            "qtd_f": str(cab.get("Quantidade F", "")),
+                            "total": str(cab.get("TOTAL", "")),
+                            "descricao_atividade": str(cab.get("Descrição Atividade", "")),
+                            "riscos": lista_riscos_funcao
+                        })
 
                     # Engine Secretary Data
                     engine = Renderer()
