@@ -282,6 +282,11 @@ if st.session_state["usuario_perfil"] == "Admin":
 if "aba_ativa_nome" not in st.session_state:
     st.session_state["aba_ativa_nome"] = "Cadastro Interativo"
 
+# Aplica a troca de navegação ANTES do widget radio ser instanciado neste run
+if st.session_state.get("forcar_nav_cadastro", False):
+    st.session_state["radio_nav_abas"] = "Cadastro Interativo"
+    st.session_state["forcar_nav_cadastro"] = False
+
 tabs_gui = ["Cadastro Interativo", "Consulta", "Relatório Completo"]
 
 aba_selecionada = st.radio(
@@ -983,7 +988,7 @@ if aba_selecionada == "Consulta":
                 
                 # Altera o nome da aba ativa diretamente no Python (Navegação imediata)
                 st.session_state["aba_ativa_nome"] = "Cadastro Interativo"
-                st.session_state["radio_nav_abas"] = "Cadastro Interativo"  # sincroniza o widget do radio
+                st.session_state["forcar_nav_cadastro"] = True  # sinaliza a troca para o próximo run
                 
                 st.success("Registros sincronizados na memória ativa! Redirecionando...")
                 st.rerun()
