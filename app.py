@@ -1109,6 +1109,13 @@ if aba_selecionada == "Relatório Completo":
                                 "medida_existente": str(rl.get("Medida Existente", "")),
                                 "epi": str(rl.get("EPI EFICAZ", "")),
                                 "epc": str(rl.get("EPC EFICAZ", "")),
+
+                                # NOVOS CAMPOS DO FORMULÁRIO DE 5 FAIXAS ADICIONADOS AQUI:
+                                "probabilidade": str(rl.get("Probabilidade", "")),
+                                "efeito": str(rl.get("Efeito", "")),
+                                # CAMPOS QUE SÃO MESMO NOME MAS ANTES E APÓS A MEDIDA
+
+                                
                                 "nivel_atual": str(rl.get("Nível", "")),
                                 "classificacao_atual": str(rl.get("Classificação", "")),
                                 "medida_proposta": str(rl.get("Medida Proposta", "")),
@@ -1151,7 +1158,14 @@ if aba_selecionada == "Relatório Completo":
                         "responsaveis": edited_sesmt[edited_sesmt["nome"].isin(responsaveis_assign)].to_dict("records"),
                         "inventarios": riscos_faixas
                     }
-
+                    
+                    # Criação de IDs únicos para evitar conflitos de múltiplos usuários
+                    id_unico = uuid.uuid4().hex
+                    template_path = f"/tmp/base_{id_unico}.odt"
+                    odt_out = f"/tmp/relatorio_{id_unico}.odt"
+                    pdf_path = f"/tmp/relatorio_{id_unico}.pdf"
+                    
+                    
                     # Baixar ODT pelo ID da API
                     request = drive_service.files().get_media(fileId=ODT_TEMPLATE_ID)
                     fh = io.BytesIO()
@@ -1159,33 +1173,33 @@ if aba_selecionada == "Relatório Completo":
                     done = False
                     while done is False:
                         status, done = downloader.next_chunk()
-                    
-                    fh.seek(0)
-                    template_path = "/tmp/Documento_base.odt"
+
+                    # CORREÇÃO DO BUFFER: getvalue() extrai os dados inteiros e sem corromper
                     with open(template_path, "wb") as f:
-                        f.write(fh.read())
+                        f.write(fh.getvalue())
                         
                     resultado_odt = engine.render(template_path, **parametros)
-                    
-                    odt_out = "/tmp/relatorio_temp.odt"
                     with open(odt_out, 'wb') as fout:
                         fout.write(resultado_odt)
-                        
+                    
+
+                     # Comando usando caminhos dinâmicos e isolados
                     comando = ['soffice', '--headless', '--convert-to', 'pdf', '--outdir', '/tmp', odt_out]
                     subprocess.run(comando, check=True)
+                   
                     pdf_path = "/tmp/relatorio_temp.pdf"
                     
                     with open(pdf_path, "rb") as pdf_file:
                         pdf_bytes = pdf_file.read()
                         
+                    st.success("✅ Relatório PGR Oficial processado com sucesso!")
                     st.download_button("📥 Download Arquivo Validado (PDF)", data=pdf_bytes, file_name=f"PGR_{sec_selecionada_relatorio}.pdf", mime="application/pdf")
-                    
-                    try:
-                        os.remove(template_path)
-                        os.remove(odt_out)
-                        os.remove(pdf_path)
-                    except:
-                        pass
+
+                    # Limpeza imediata dos arquivos temporários dinâmicos
+                    for arquivo in [template_path, odt_out, pdf_path]:
+                        if os.path.exists(arquivo):
+                            os.remove(arquivo
+
                 except Exception as g_erro:
                     st.error(f"Engenharia de automação Falhou na esteira: {str(g_erro)}")
     else:
