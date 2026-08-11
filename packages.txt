@@ -1,4 +1,7 @@
 libreoffice
+libreoffice-writer
+libfontconfig1
+ttf-mscorefonts-installer
 zlib1g-dev
 libjpeg-dev
 libpng-dev
