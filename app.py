@@ -840,6 +840,12 @@ def gerar_view_consolidada():
     # 🌟 CORREÇÃO: Carrega a tabela de Medidas Propostas que estava faltando aqui dentro
     df_mp = load_tabela("Risco_Medida_Proposta")
 
+    # 🌟 CORREÇÃO ESSENCIAL: Traduz as colunas de Id da planilha para o padrão minúsculo exigido pelos merges abaixo
+    df_mp = df_mp.rename(columns={
+        "Id_Probabilidade": "id_prob_proposta",
+        "Id_Efeito": "id_efeito_proposta"
+    })
+
     # Medida Existente -> tudo com sufixo "_atual"
     df_me = load_tabela("Risco_Medida_Existente").rename(columns={
         "Id_Risco_Med_Existente": "Id_Risco_Med_Existente", # Mantém o nome igual ao Sheets
@@ -849,7 +855,7 @@ def gerar_view_consolidada():
         "Nível": "nivel_atual",
         "Classificação": "classificacao_atual",
     })
-    df_mp = load_tabela("Risco_Medida_Proposta")
+        
 
     # Tabelas de apoio, duplicadas com nomes diferentes para o lado atual e proposto
     df_prob_raw = load_tabela("Probabilidade")
