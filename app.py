@@ -29,12 +29,6 @@ class SugestaoPGR(BaseModel):
     riscos: List[RiscoEstruturado]
     
 
-# Correção de compatibilidade para a biblioteca secretary no Python >= 3.10
-jinja2.Markup = markupsafe.Markup
-jinja2.contextfilter = getattr(jinja2, 'pass_context', None)
-jinja2.evalcontextfilter = getattr(jinja2, 'pass_eval_context', None)
-jinja2.environmentfilter = getattr(jinja2, 'pass_environment', None)
-
 from secretary import Renderer
 import traceback
 
@@ -1227,8 +1221,16 @@ if aba_selecionada == "Relatório Completo":
                     fh = io.BytesIO()
                     downloader = MediaIoBaseDownload(fh, request)
                     done = False
-                    while done is False:
-                        status, done = downloader.next_chunk()
+
+                    # 🌟 CORREÇÃO: Grava os chunks no arquivo real à medida que o download avança
+                    with open(template_path, "wb") as f:
+                        
+                        while done is False:
+                            status, done = downloader.next_chunk()
+                            f.write(fh.getvalue())
+                            
+                    # Força a leitura do arquivo recém-gravado
+                    resultado_odt = engine.render(template_path, **parametros)
 
                     # CORREÇÃO DO BUFFER: getvalue() extrai os dados inteiros e sem corromper
                     with open(template_path, "wb") as f:
