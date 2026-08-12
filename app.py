@@ -8,6 +8,7 @@ import os
 import datetime
 import subprocess
 import io
+import uuid
 import markupsafe
 import jinja2
 from google import genai
@@ -835,19 +836,57 @@ def gerar_view_consolidada():
     df4 = load_tabela("Cargo").rename(columns={"Id_Cargo": "id_c"})
     df_lr = load_tabela("Lotacao_Risco").rename(columns={"Id_Lotação_Risco": "id_lr", "Id_Cargo_Func": "id_cf", "Id_Risco": "id_risco"})
     df_risco = load_tabela("Riscos_Ambientais").rename(columns={"Id_Risco": "id_risco"})
-    df_me = load_tabela("Risco_Medida_Existente").rename(columns={"Id_Risco_Med_Existente": "id_me", "Id_Lotação_Risco": "id_lr"})
-    df_mp = load_tabela("Risco_Medida_Proposta").rename(columns={"Id_Risco_Med_Proposta": "id_mp", "Id_Risco_Med_Existente": "id_me"})
-    
+
+    # Medida Existente -> tudo com sufixo "_atual"
+    df_me = load_tabela("Risco_Medida_Existente").rename(columns={
+        "Id_Risco_Med_Existente": "id_me",
+        "Id_Lotação_Risco": "id_lr",
+        "Id_Probabilidade": "id_prob_atual",
+        "Id_Efeito": "id_efeito_atual",
+        "Nível": "nivel_atual",
+        "Classificação": "classificacao_atual",
+    })
+
+    # Tabelas de apoio, duplicadas com nomes diferentes para o lado atual e proposto
+    df_prob_raw = load_tabela("Probabilidade")
+    df_prob_atual = df_prob_raw.rename(columns={
+        "Id_Probabilidade": "id_prob_atual",
+        "Nome Probabilidade": "nome_prob_atual",
+        "Peso Probabilidade": "peso_prob_atual",
+    })[["id_prob_atual", "nome_prob_atual", "peso_prob_atual"]]
+    df_prob_proposta = df_prob_raw.rename(columns={
+        "Id_Probabilidade": "id_prob_proposta",
+        "Nome Probabilidade": "nome_prob_proposta",
+        "Peso Probabilidade": "peso_prob_proposta",
+    })[["id_prob_proposta", "nome_prob_proposta", "peso_prob_proposta"]]
+
+    df_efeito_raw = load_tabela("Efeito")
+    df_efeito_atual = df_efeito_raw.rename(columns={
+        "Id_Efeito": "id_efeito_atual",
+        "Nome Efeito": "nome_efeito_atual",
+        "Peso Efeito": "peso_efeito_atual",
+    })[["id_efeito_atual", "nome_efeito_atual", "peso_efeito_atual"]]
+    df_efeito_proposta = df_efeito_raw.rename(columns={
+        "Id_Efeito": "id_efeito_proposta",
+        "Nome Efeito": "nome_efeito_proposta",
+        "Peso Efeito": "peso_efeito_proposta",
+    })[["id_efeito_proposta", "nome_efeito_proposta", "peso_efeito_proposta"]]
+       
     m_sec_sl = pd.merge(df1, df2, on="id_sec", how="left")
     m_sl_cf = pd.merge(m_sec_sl, df3, on="id_sl", how="left")
     m_cf_carg = pd.merge(m_sl_cf, df4, on="id_c", how="left")
-    
     m_c_lr = pd.merge(m_cf_carg, df_lr, on="id_cf", how="left")
     m_lr_ri = pd.merge(m_c_lr, df_risco, on="id_risco", how="left")
-    
     m_ri_me = pd.merge(m_lr_ri, df_me, on="id_lr", how="left")
-    return pd.merge(m_ri_me, df_mp, on="id_me", how="left")
+    m_me_mp = pd.merge(m_ri_me, df_mp, on="id_me", how="left")
 
+    m_final = pd.merge(m_me_mp, df_prob_atual, on="id_prob_atual", how="left")
+    m_final = pd.merge(m_final, df_prob_proposta, on="id_prob_proposta", how="left")
+    m_final = pd.merge(m_final, df_efeito_atual, on="id_efeito_atual", how="left")
+    m_final = pd.merge(m_final, df_efeito_proposta, on="id_efeito_proposta", how="left")
+
+    return m_final
+    
 
 # ==============================================================================
 # ABA 2: CONSULTA DE DADOS + FILTROS CUMULATIVOS
@@ -1110,16 +1149,22 @@ if aba_selecionada == "Relatório Completo":
                                 "epi": str(rl.get("EPI EFICAZ", "")),
                                 "epc": str(rl.get("EPC EFICAZ", "")),
 
-                                # NOVOS CAMPOS DO FORMULÁRIO DE 5 FAIXAS ADICIONADOS AQUI:
-                                "probabilidade": str(rl.get("Probabilidade", "")),
-                                "efeito": str(rl.get("Efeito", "")),
-                                # CAMPOS QUE SÃO MESMO NOME MAS ANTES E APÓS A MEDIDA
+                                # --- Avaliação ATUAL (antes da medida) ---
+                                "probabilidade_atual": f"{rl.get('peso_prob_atual', '')} - {rl.get('nome_prob_atual', '')}",
+                                "efeito_atual": f"{rl.get('peso_efeito_atual', '')} - {rl.get('nome_efeito_atual', '')}",
+                                "nivel_atual": str(rl.get("nivel_atual", "")),
+                                "classificacao_atual": str(rl.get("classificacao_atual", "")),
 
-                                
-                                "nivel_atual": str(rl.get("Nível", "")),
-                                "classificacao_atual": str(rl.get("Classificação", "")),
-                                "medida_proposta": str(rl.get("Medida Proposta", "")),
-                                "tipo_medida_proposta": str(rl.get("Nome Tipo Medida Proposta", "")),
+                                # --- Plano de ação ---
+                                "medida_proposta": str(rl.get("Medida Proposta", "")),          # texto livre digitado pelo usuário
+                                "tipo_medida_proposta": str(rl.get("Nome Tipo Medida Proposta", "")),  # EPC/EPI/Administrativa/Médica
+
+                                # --- Avaliação PROPOSTA (esperada após a medida) ---
+                                "probabilidade_proposta": f"{rl.get('peso_prob_proposta', '')} - {rl.get('nome_prob_proposta', '')}",
+                                "efeito_proposta": f"{rl.get('peso_efeito_proposta', '')} - {rl.get('nome_efeito_proposta', '')}",
+                                "nivel_proposta": str(rl.get("nivel_proposta", "")),
+                                "classificacao_proposta": str(rl.get("classificacao_proposta", "")),
+
                                 "imediata": str(rl.get("Imediata", "")),
                                 "responsavel": str(rl.get("Responsável", "")),
                                 "data_inicio": str(rl.get("Data Início", "")),
@@ -1128,6 +1173,7 @@ if aba_selecionada == "Relatório Completo":
                                 "status": str(rl.get("Status", "")),
                                 "porcentagem": str(rl.get("Porcentagem", "")),
                             })
+                            
                         riscos_faixas.append({
                             "orgao": str(cab.get("Nome do Órgão", "")),
                             "lotacao": str(cab.get("Lotação", "")),
@@ -1186,9 +1232,7 @@ if aba_selecionada == "Relatório Completo":
                      # Comando usando caminhos dinâmicos e isolados
                     comando = ['soffice', '--headless', '--convert-to', 'pdf', '--outdir', '/tmp', odt_out]
                     subprocess.run(comando, check=True)
-                   
-                    pdf_path = "/tmp/relatorio_temp.pdf"
-                    
+                                                          
                     with open(pdf_path, "rb") as pdf_file:
                         pdf_bytes = pdf_file.read()
                         
