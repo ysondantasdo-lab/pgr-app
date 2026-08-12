@@ -1198,7 +1198,7 @@ if aba_selecionada == "Relatório Completo":
                     # Limpeza imediata dos arquivos temporários dinâmicos
                     for arquivo in [template_path, odt_out, pdf_path]:
                         if os.path.exists(arquivo):
-                            os.remove(arquivo
+                            os.remove(arquivo)
 
                 except Exception as g_erro:
                     st.error(f"Engenharia de automação Falhou na esteira: {str(g_erro)}")
