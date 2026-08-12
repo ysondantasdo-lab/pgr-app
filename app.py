@@ -842,13 +842,14 @@ def gerar_view_consolidada():
 
     # Medida Existente -> tudo com sufixo "_atual"
     df_me = load_tabela("Risco_Medida_Existente").rename(columns={
-        "Id_Risco_Med_Existente": "id_me",
+        "Id_Risco_Med_Existente": "Id_Risco_Med_Existente", # Mantém o nome igual ao Sheets
         "Id_Lotação_Risco": "id_lr",
         "Id_Probabilidade": "id_prob_atual",
         "Id_Efeito": "id_efeito_atual",
         "Nível": "nivel_atual",
         "Classificação": "classificacao_atual",
     })
+    df_mp = load_tabela("Risco_Medida_Proposta")
 
     # Tabelas de apoio, duplicadas com nomes diferentes para o lado atual e proposto
     df_prob_raw = load_tabela("Probabilidade")
@@ -881,7 +882,7 @@ def gerar_view_consolidada():
     m_c_lr = pd.merge(m_cf_carg, df_lr, on="id_cf", how="left")
     m_lr_ri = pd.merge(m_c_lr, df_risco, on="id_risco", how="left")
     m_ri_me = pd.merge(m_lr_ri, df_me, on="id_lr", how="left")
-    m_me_mp = pd.merge(m_ri_me, df_mp, on="id_me", how="left")
+    m_me_mp = pd.merge(m_ri_me, df_mp, on="Id_Risco_Med_Existente", how="left")
 
     m_final = pd.merge(m_me_mp, df_prob_atual, on="id_prob_atual", how="left")
     m_final = pd.merge(m_final, df_prob_proposta, on="id_prob_proposta", how="left")
