@@ -837,6 +837,9 @@ def gerar_view_consolidada():
     df_lr = load_tabela("Lotacao_Risco").rename(columns={"Id_Lotação_Risco": "id_lr", "Id_Cargo_Func": "id_cf", "Id_Risco": "id_risco"})
     df_risco = load_tabela("Riscos_Ambientais").rename(columns={"Id_Risco": "id_risco"})
 
+    # 🌟 CORREÇÃO: Carrega a tabela de Medidas Propostas que estava faltando aqui dentro
+    df_mp = load_tabela("Risco_Medida_Proposta")
+
     # Medida Existente -> tudo com sufixo "_atual"
     df_me = load_tabela("Risco_Medida_Existente").rename(columns={
         "Id_Risco_Med_Existente": "id_me",
