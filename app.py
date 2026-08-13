@@ -1220,21 +1220,14 @@ if aba_selecionada == "Relatório Completo":
                     fh = io.BytesIO()
                     downloader = MediaIoBaseDownload(fh, request)
                     done = False
+                    while done is False:
+                        status, done = downloader.next_chunk()
 
-                    # 🌟 CORREÇÃO: Grava os chunks no arquivo real à medida que o download avança
-                    with open(template_path, "wb") as f:
-                        
-                        while done is False:
-                            status, done = downloader.next_chunk()
-                            f.write(fh.getvalue())
-                            
-                    # Força a leitura do arquivo recém-gravado
-                    resultado_odt = engine.render(template_path, **parametros)
-
-                    # CORREÇÃO DO BUFFER: getvalue() extrai os dados inteiros e sem corromper
+                    
+                    # Só grava o arquivo depois que o download estiver 100% completo
                     with open(template_path, "wb") as f:
                         f.write(fh.getvalue())
-                        
+                                                 
                     resultado_odt = engine.render(template_path, **parametros)
                     with open(odt_out, 'wb') as fout:
                         fout.write(resultado_odt)
