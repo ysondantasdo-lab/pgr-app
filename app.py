@@ -1258,8 +1258,32 @@ if aba_selecionada == "Relatório Completo":
                         if os.path.exists(arquivo):
                             os.remove(arquivo)
 
+               
                 except Exception as g_erro:
-                    st.error(f"Engenharia de automação Falhou na esteira: {str(g_erro)}")
+                    import jinja2
+                    import sys
+
+                    # Verifica se o erro veio da compilação de tags do Jinja2
+                    if isinstance(g_erro, jinja2.exceptions.TemplateSyntaxError):
+                        # Captura o traceback detalhado para tentar pescar o texto do template
+                        tb = sys.exc_info()[2]
+                        while tb.tb_next:
+                            tb = tb.tb_next
+                        local_vars = tb.tb_frame.f_locals
+                        
+                        # Extrai o trecho do texto do documento onde o Jinja2 engasgou
+                        contexto_texto = local_vars.get("source", "Texto não disponível")
+                        if len(contexto_texto) > 500:
+                            contexto_texto = contexto_texto[-500:]  # Pega o final onde o erro ocorre
+                        
+                        st.error(f"❌ **Erro de Sintaxe detectado no Template .odt!**")
+                        st.markdown(f"**Motivo do travamento:** {g_erro.message}")
+                        st.markdown("**Trecho do texto analisado logo antes de quebrar:**")
+                        st.code(contexto_texto, language="html")
+                    else:
+                        # Mantém o comportamento original caso seja outro tipo de erro
+                        st.error(f"Engenharia de automação Falhou na esteira: {str(g_erro)}")
+                        
     else:
         st.error("⛔ A emissão do relatório oficial em PDF é restrita ao Administrador.")
 
@@ -1272,3 +1296,6 @@ if __name__ == "__main__":
     except Exception as default_erro:
         st.error(f"🚨 Ocorreu um Erro Inesperado na Aplicação: {str(default_erro)}")
         st.code(traceback.format_exc(), language="python")
+
+
+
