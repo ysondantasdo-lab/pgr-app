@@ -28,7 +28,7 @@ class RiscoEstruturado(BaseModel):
 class SugestaoPGR(BaseModel):
     riscos: List[RiscoEstruturado]
     
-
+import unicodedata  # Certifique-se de importar no topo do arquivo
 from secretary import Renderer
 import traceback
 
@@ -1204,6 +1204,7 @@ if aba_selecionada == "Relatório Completo":
                         "GRUPO_RISCO": str(sec_dados["Grupo de Risco"]),
                         "SIGLA": str(sec_dados["Sigla"]),
                         "equipe_tecnica": edited_sesmt.to_dict("records"),
+                        
                         "responsaveis": edited_sesmt[edited_sesmt["nome"].isin(responsaveis_assign)].to_dict("records"),
                         "inventarios": riscos_faixas
                     }
