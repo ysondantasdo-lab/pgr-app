@@ -14,8 +14,10 @@ import jinja2
 from google import genai
 from pydantic import BaseModel, Field
 from typing import List
-
+import unicodedata  # Certifique-se de importar no topo do arquivo
+from secretary import Renderer
 import traceback
+import sys
 
 # Estrutura para a Inteligência Artificial do Gemini entregar os dados organizados
 class RiscoEstruturado(BaseModel):
@@ -28,9 +30,7 @@ class RiscoEstruturado(BaseModel):
 class SugestaoPGR(BaseModel):
     riscos: List[RiscoEstruturado]
     
-import unicodedata  # Certifique-se de importar no topo do arquivo
-from secretary import Renderer
-import traceback
+
 
 # Configurações de layout
 st.set_page_config(page_title="PGR Dinâmico em Nuvem", layout="wide")
@@ -1193,7 +1193,7 @@ if aba_selecionada == "Relatório Completo":
                     # Engine Secretary Data
                     engine = Renderer()
                     
-                    # --- ALTERAÇÃO AQUI: Criamos os dados brutos e limpamos tudo de uma vez ---
+                    # Filtro recursivo para normalizar strings de formulários e tabelas dinâmicas
                     def _limpar(d):
                         if isinstance(d, dict): return {k: _limpar(v) for k, v in d.items()}
                         if isinstance(d, list): return [_limpar(i) for i in d]
@@ -1260,30 +1260,50 @@ if aba_selecionada == "Relatório Completo":
 
                
                 except Exception as g_erro:
-                    import jinja2
-                    import sys
+
 
                     # Verifica se o erro veio da compilação de tags do Jinja2
                     if isinstance(g_erro, jinja2.exceptions.TemplateSyntaxError):
-                        # Captura o traceback detalhado para tentar pescar o texto do template
-                        tb = sys.exc_info()[2]
-                        while tb.tb_next:
+                        # Captura a árvore completa de exceção para inspecionar escopos profundos
+                        _, _, tb = sys.exc_info()
+                        contexto_texto = "Não foi possível extrair o XML do template."
+                        
+                        # Varre as variáveis internas do Secretary para achar o XML fonte
+                        
+                        while tb:
+                            if "xml_source" in tb.tb_frame.f_locals:
+                                try:
+                                    raw_bytes = tb.tb_frame.f_locals["xml_source"]
+                                    xml_completo = raw_bytes.decode('utf-8', errors='ignore')
+                                    
+                                    # Recorta cirurgicamente as linhas onde o Jinja2 quebrou no ODT
+                                    linhas = xml_completo.splitlines()
+                                    linha_alvo = max(0, g_erro.lineno - 1)
+                                    inicio = max(0, linha_alvo - 10)
+                                    fim = min(len(linhas), linha_alvo + 10)
+                                    contexto_texto = "\n".join(linhas[inicio:fim])
+                                except:
+                                    pass
+                                break
                             tb = tb.tb_next
-                        local_vars = tb.tb_frame.f_locals
                         
-                        # Extrai o trecho do texto do documento onde o Jinja2 engasgou
-                        contexto_texto = local_vars.get("source", "Texto não disponível")
-                        if len(contexto_texto) > 500:
-                            contexto_texto = contexto_texto[-500:]  # Pega o final onde o erro ocorre
-                        
+                        # Se encontrou o XML, filtra apenas o pedaço problemático para não travar a tela
+                        if contexto_texto != "Não foi possível resgatar o XML.":
+                            # O Jinja indica a linha do erro em g_erro.lineno
+                            linhas = contexto_texto.splitlines()
+                            linha_erro = g_erro.lineno if g_erro.lineno else 1
+                            # Pega 15 linhas antes e 5 depois do ponto crítico
+                            inicio = max(0, linha_erro - 15)
+                            fim = min(len(linhas), linha_erro + 5)
+                            contexto_texto = "\n".join(linhas[inicio:fim])
+
                         st.error(f"❌ **Erro de Sintaxe detectado no Template .odt!**")
-                        st.markdown(f"**Motivo do travamento:** {g_erro.message}")
-                        st.markdown("**Trecho do texto analisado logo antes de quebrar:**")
-                        st.code(contexto_texto, language="html")
+                        st.markdown(f"**Motivo do travamento:** {g_erro.message} (Linha XML: {g_erro.lineno})")
+                        st.markdown("**Trecho exato do documento onde a leitura travou:**")
+                        st.code(contexto_texto, language="xml")
                     else:
-                        # Mantém o comportamento original caso seja outro tipo de erro
                         st.error(f"Engenharia de automação Falhou na esteira: {str(g_erro)}")
-                        
+                      
     else:
         st.error("⛔ A emissão do relatório oficial em PDF é restrita ao Administrador.")
 
