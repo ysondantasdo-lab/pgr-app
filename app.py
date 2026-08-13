@@ -312,7 +312,7 @@ def calcula_matriz(peso_p, peso_e):
     if x <= 3:
         nivel = "Trivial"
         classificacao = "Irrelevante"
-        imediata = "Irrelevante - Não prioritário.Ações dentro do princípio de melhoria contínua. Pode ser necessária avaliação quantitativa do Setor/GHE para confirmação da categoria, a critério do profissional de Higiene Ocupacional."
+        imediata = "Irrelevante - Não prioritário. Ações dentro do princípio de melhoria contínua. Pode ser necessária avaliação quantitativa do Setor/GHE para confirmação da categoria, a critério do profissional de Higiene Ocupacional."
     elif 4 <= x <= 8:
         nivel = "Moderado"
         classificacao = "Crítica"
@@ -320,7 +320,7 @@ def calcula_matriz(peso_p, peso_e):
     elif 9 <= x <= 12:
         nivel = "Alto"
         classificacao = "Não Tolerado"
-        imediata = "Crítica - Prioridade preferencial.Adotar medidas de controle para redução da exposição e iniciar processo de avaliação quantitativa do Setor/GHE."
+        imediata = "Crítica - Prioridade preferencial. Adotar medidas de controle para redução da exposição e iniciar processo de avaliação quantitativa do Setor/GHE."
     else: # >= 16
         nivel = "Muito Alto"
         classificacao = "Não Tolerado"
@@ -354,8 +354,7 @@ if aba_selecionada == "Cadastro Interativo":
         st.session_state["N"] = 0
     if "indice_em_edicao" not in st.session_state: 
         st.session_state["indice_em_edicao"] = None 
-
-    # --- ENGENHARIA DE PREENCHIMENTO AUTOMÁTICO DO CABEÇALHO ---
+   
     #--- ENGENHARIA DE PREENCHIMENTO AUTOMÁTICO DO CABEÇALHO ---
     id_alvo_db = st.session_state.get("id_funcao_em_alteracao_db", None)
 
@@ -630,7 +629,7 @@ if aba_selecionada == "Cadastro Interativo":
         value=imediata_prop,
         height=100,          # Altura inicial confortável
         disabled=True,      # CORREÇÃO: Bloqueia a digitação mas mantém o visual 100% nítido
-        key=f"imediata_show_{fk}"
+        key=f"imediata_show_{fk}_{val_x_prop}"   # <-- key agora inclui val_x_prop
     )
     
     c15, c16 = st.columns(2)
