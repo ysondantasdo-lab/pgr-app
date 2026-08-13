@@ -1272,7 +1272,7 @@ if aba_selecionada == "Relatório Completo":
                         
                         while tb:
                             if "xml_source" in tb.tb_frame.f_locals:
-                                                                try:
+                                try:
                                     raw_bytes = tb.tb_frame.f_locals["xml_source"]
                                     xml_completo = raw_bytes.decode('utf-8', errors='ignore')
                                     
