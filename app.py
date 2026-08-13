@@ -1272,18 +1272,27 @@ if aba_selecionada == "Relatório Completo":
                         
                         while tb:
                             if "xml_source" in tb.tb_frame.f_locals:
-                                try:
+                                                                try:
                                     raw_bytes = tb.tb_frame.f_locals["xml_source"]
                                     xml_completo = raw_bytes.decode('utf-8', errors='ignore')
                                     
-                                    # Recorta cirurgicamente as linhas onde o Jinja2 quebrou no ODT
-                                    linhas = xml_completo.splitlines()
-                                    linha_alvo = max(0, g_erro.lineno - 1)
-                                    inicio = max(0, linha_alvo - 10)
-                                    fim = min(len(linhas), linha_alvo + 10)
-                                    contexto_texto = "\n".join(linhas[inicio:fim])
+                                    # --- ALTERAÇÃO AQUI: Recorta baseado em caracteres do Jinja2 ---
+                                    # Procura ocorrências de tags lógicas próximas ao erro
+                                    posicao_erro = xml_completo.find("{%")
+                                    if posicao_erro == -1:
+                                        posicao_erro = xml_completo.find("{{")
+                                        
+                                    if posicao_erro != -1:
+                                        # Pega 150 caracteres antes e 350 depois da tag encontrada
+                                        inicio = max(0, posicao_erro - 150)
+                                        fim = min(len(xml_completo), posicao_erro + 350)
+                                        contexto_texto = f"... {xml_completo[inicio:fim]} ..."
+                                    else:
+                                        # Se não achar tags, pega as primeiras 500 letras do documento
+                                        contexto_texto = xml_completo[:500]
                                 except:
                                     pass
+
                                 break
                             tb = tb.tb_next
                         
