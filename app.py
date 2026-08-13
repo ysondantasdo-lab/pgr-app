@@ -1192,7 +1192,15 @@ if aba_selecionada == "Relatório Completo":
 
                     # Engine Secretary Data
                     engine = Renderer()
-                    parametros = {
+                    
+                    # --- ALTERAÇÃO AQUI: Criamos os dados brutos e limpamos tudo de uma vez ---
+                    def _limpar(d):
+                        if isinstance(d, dict): return {k: _limpar(v) for k, v in d.items()}
+                        if isinstance(d, list): return [_limpar(i) for i in d]
+                        if isinstance(d, str): return __import__('unicodedata').normalize('NFC', d)
+                        return d
+
+                    parametros = _limpar({
                         "NOME_ORGAO": str(sec_dados["Nome do Órgão"]),
                         "DATA_EMISSAO": tag_data,
                         "TOTALMF": str(total_mf_calc),
@@ -1207,7 +1215,8 @@ if aba_selecionada == "Relatório Completo":
                         
                         "responsaveis": edited_sesmt[edited_sesmt["nome"].isin(responsaveis_assign)].to_dict("records"),
                         "inventarios": riscos_faixas
-                    }
+                    })
+                    # --------------------------------------------------------------------------
                     
                     # Criação de IDs únicos para evitar conflitos de múltiplos usuários
                     id_unico = uuid.uuid4().hex
