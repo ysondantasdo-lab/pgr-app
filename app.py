@@ -20,6 +20,8 @@ import traceback
 import sys
 import zipfile
 import html
+import re
+import shutil
 
 # Estrutura para a Inteligência Artificial do Gemini entregar os dados organizados
 class RiscoEstruturado(BaseModel):
@@ -32,6 +34,51 @@ class RiscoEstruturado(BaseModel):
 class SugestaoPGR(BaseModel):
     riscos: List[RiscoEstruturado]
     
+# ==============================================================================
+# PIPELINE DE HIGIENIZAÇÃO GLOBAL (INSIRA EXATAMENTE ESTE BLOCO AQUI)
+# ==============================================================================
+def pipeline_higienizacao_template(caminho_odt: str) -> None:
+    """
+    Função global para limpar o XML do ODT antes de passar para o Jinja2/Secretary.
+    Conserta caracteres especiais, tags quebradas e corrige tabelas mal estruturadas automaticamente.
+    """
+    pasta_extracao = caminho_odt + "_workspace"
+    
+    # Descompacta o ODT (que é um arquivo ZIP por dentro)
+    with zipfile.ZipFile(caminho_odt, 'r') as zip_ref:
+        zip_ref.extractall(pasta_extracao)
+        
+    xml_content_path = os.path.join(pasta_extracao, "content.xml")
+    
+    if os.path.exists(xml_content_path):
+        with open(xml_content_path, "r", encoding="utf-8") as f:
+            conteudo_xml = f.read()
+            
+        # 1. Corrige caracteres acentuados (transforma &#199; em Ç)
+        conteudo_xml = html.unescape(conteudo_xml)
+        
+        # 2. Limpa tags de estilo que o LibreOffice enfia no meio dos comandos do Jinja
+        conteudo_xml = re.sub(r'({%.*?})(<.*?>)(.*?%})', r'\1\3', conteudo_xml)
+        conteudo_xml = re.sub(r'({{.*?})(<.*?>)(.*?}})', r'\1\3', conteudo_xml)
+        
+        # 3. Força a conversão do {% for %} em tabela para a sintaxe nativa {% def %} do secretary
+        conteudo_xml = re.sub(r'{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%}', r'{% def \1=\2 %}', conteudo_xml)
+        conteudo_xml = conteudo_xml.replace("{% endfor %}", "")
+        
+        with open(xml_content_path, "w", encoding="utf-8") as f:
+            f.write(conteudo_xml)
+            
+    # Compacta tudo de volta no arquivo original
+    if os.path.exists(caminho_odt):
+        os.remove(caminho_odt)
+    shutil.make_archive(pasta_extracao, 'zip', pasta_extracao)
+    shutil.move(pasta_extracao + ".zip", caminho_odt)
+    shutil.rmtree(pasta_extracao)
+# ==============================================================================
+
+
+# Configurações de layout (O seu código original continua aqui para baixo)
+st.set_page_config(page_title="PGR Dinâmico em Nuvem", layout="wide")
 
 
 # Configurações de layout
@@ -1245,34 +1292,8 @@ if aba_selecionada == "Relatório Completo":
                     # Só grava o arquivo depois que o download estiver 100% completo
                     with open(template_path, "wb") as f:
                         f.write(fh.getvalue())
-
-
-
-
-                    
-                    # === CORREÇÃO: Remove entidades XML sacanas (&#199;, etc) do content.xml antes do Jinja2 processar ===
-                    pasta_extracao = f"/tmp/extracao_{id_unico}"
-                    with zipfile.ZipFile(template_path, 'r') as zip_ref:
-                        zip_ref.extractall(pasta_extracao)
-
-                    xml_content_path = os.path.join(pasta_extracao, "content.xml")
-                    if os.path.exists(xml_content_path):
-                        with open(xml_content_path, "r", encoding="utf-8") as f:
-                            xml_sujo = f.read()
-    
-                        # Transforma &#199;&#195; em ÇÃ reais salvando o Jinja2 do colapso
-                        xml_limpo = html.unescape(xml_sujo)
-    
-                        with open(xml_content_path, "w", encoding="utf-8") as f:
-                            f.write(xml_limpo)
-
-                    # Reconstrói o arquivo .odt corrigido
-                    os.remove(template_path)
-                    import shutil
-                    shutil.make_archive(pasta_extracao, 'zip', pasta_extracao)
-                    shutil.move(pasta_extracao + ".zip", template_path)
-                    shutil.rmtree(pasta_extracao)
-                    # ===================================================================================================
+                        
+                    pipeline_higienizacao_template(template_path)
 
                     # Agora a renderização do Secretary/Jinja ocorre de forma segura
                     resultado_odt = engine.render(template_path, **parametros)
@@ -1293,10 +1314,7 @@ if aba_selecionada == "Relatório Completo":
                     for arquivo in [template_path, odt_out, pdf_path]:
                         if os.path.exists(arquivo):
                             os.remove(arquivo)
-
-                    
-
-               
+            
                
                 except Exception as g_erro:
                     if isinstance(g_erro, jinja2.exceptions.TemplateSyntaxError):
