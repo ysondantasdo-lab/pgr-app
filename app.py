@@ -18,6 +18,8 @@ import unicodedata  # Certifique-se de importar no topo do arquivo
 from secretary import Renderer
 import traceback
 import sys
+import zipfile
+import html
 
 # Estrutura para a Inteligência Artificial do Gemini entregar os dados organizados
 class RiscoEstruturado(BaseModel):
@@ -1217,14 +1219,13 @@ if aba_selecionada == "Relatório Completo":
                         "inventarios": riscos_faixas
                     })
                     # --------------------------------------------------------------------------
-                    
+
                     # Criação de IDs únicos para evitar conflitos de múltiplos usuários
                     id_unico = uuid.uuid4().hex
                     template_path = f"/tmp/base_{id_unico}.odt"
                     odt_out = f"/tmp/relatorio_{id_unico}.odt"
                     pdf_path = f"/tmp/relatorio_{id_unico}.pdf"
-                    
-                    
+
                     # Baixar ODT pelo ID da API
                     request = drive_service.files().get_media(fileId=ODT_TEMPLATE_ID)
                     fh = io.BytesIO()
@@ -1233,23 +1234,46 @@ if aba_selecionada == "Relatório Completo":
                     while done is False:
                         status, done = downloader.next_chunk()
 
-                    
                     # Só grava o arquivo depois que o download estiver 100% completo
                     with open(template_path, "wb") as f:
                         f.write(fh.getvalue())
-                                                 
+
+                    # === CORREÇÃO: Remove entidades XML sacanas (&#199;, etc) do content.xml antes do Jinja2 processar ===
+                    pasta_extracao = f"/tmp/extracao_{id_unico}"
+                    with zipfile.ZipFile(template_path, 'r') as zip_ref:
+                        zip_ref.extractall(pasta_extracao)
+
+                    xml_content_path = os.path.join(pasta_extracao, "content.xml")
+                    if os.path.exists(xml_content_path):
+                        with open(xml_content_path, "r", encoding="utf-8") as f:
+                            xml_sujo = f.read()
+    
+                        # Transforma &#199;&#195; em ÇÃ reais salvando o Jinja2 do colapso
+                        xml_limpo = html.unescape(xml_sujo)
+    
+                        with open(xml_content_path, "w", encoding="utf-8") as f:
+                            f.write(xml_limpo)
+
+                    # Reconstrói o arquivo .odt corrigido
+                    os.remove(template_path)
+                    import shutil
+                    shutil.make_archive(pasta_extracao, 'zip', pasta_extracao)
+                    shutil.move(pasta_extracao + ".zip", template_path)
+                    shutil.rmtree(pasta_extracao)
+                    # ===================================================================================================
+
+                    # Agora a renderização do Secretary/Jinja ocorre de forma segura
                     resultado_odt = engine.render(template_path, **parametros)
                     with open(odt_out, 'wb') as fout:
                         fout.write(resultado_odt)
-                    
 
-                     # Comando usando caminhos dinâmicos e isolados
+                    # Comando usando caminhos dinâmicos e isolados
                     comando = ['soffice', '--headless', '--convert-to', 'pdf', '--outdir', '/tmp', odt_out]
                     subprocess.run(comando, check=True)
-                                                          
+                                      
                     with open(pdf_path, "rb") as pdf_file:
                         pdf_bytes = pdf_file.read()
-                        
+    
                     st.success("✅ Relatório PGR Oficial processado com sucesso!")
                     st.download_button("📥 Download Arquivo Validado (PDF)", data=pdf_bytes, file_name=f"PGR_{sec_selecionada_relatorio}.pdf", mime="application/pdf")
 
@@ -1257,6 +1281,8 @@ if aba_selecionada == "Relatório Completo":
                     for arquivo in [template_path, odt_out, pdf_path]:
                         if os.path.exists(arquivo):
                             os.remove(arquivo)
+
+                    
 
                
                
