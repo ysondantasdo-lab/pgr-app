@@ -1259,59 +1259,58 @@ if aba_selecionada == "Relatório Completo":
                             os.remove(arquivo)
 
                
+               
                 except Exception as g_erro:
-
-
-                    # Verifica se o erro veio da compilação de tags do Jinja2
                     if isinstance(g_erro, jinja2.exceptions.TemplateSyntaxError):
-                        # Captura a árvore completa de exceção para inspecionar escopos profundos
-                        _, _, tb = sys.exc_info()
-                        contexto_texto = "Não foi possível extrair o XML do template."
-                        
-                        # Varre as variáveis internas do Secretary para achar o XML fonte
-                        
-                        while tb:
-                            if "xml_source" in tb.tb_frame.f_locals:
-                                try:
-                                    raw_bytes = tb.tb_frame.f_locals["xml_source"]
-                                    xml_completo = raw_bytes.decode('utf-8', errors='ignore')
-                                    
-                                    # --- ALTERAÇÃO AQUI: Recorta baseado em caracteres do Jinja2 ---
-                                    # Procura ocorrências de tags lógicas próximas ao erro
-                                    posicao_erro = xml_completo.find("{%")
-                                    if posicao_erro == -1:
-                                        posicao_erro = xml_completo.find("{{")
-                                        
-                                    if posicao_erro != -1:
-                                        # Pega 150 caracteres antes e 350 depois da tag encontrada
-                                        inicio = max(0, posicao_erro - 150)
-                                        fim = min(len(xml_completo), posicao_erro + 350)
-                                        contexto_texto = f"... {xml_completo[inicio:fim]} ..."
-                                    else:
-                                        # Se não achar tags, pega as primeiras 500 letras do documento
-                                        contexto_texto = xml_completo[:500]
-                                except:
-                                    pass
+                        st.error("❌ **Erro de Sintaxe detectado no Template .odt!**")
+        
+                        # g_erro.message pode não existir em versões novas; g_erro.name ou str(g_erro) é mais seguro
+                        mensagem_erro = getattr(g_erro, 'message', str(g_erro))
+                        st.markdown(f"**Motivo do travamento:** {mensagem_erro}")
+        
+                        xml_completo = None
 
-                                break
-                            tb = tb.tb_next
-                        
-                        # Se encontrou o XML, filtra apenas o pedaço problemático para não travar a tela
-                        if contexto_texto != "Não foi possível resgatar o XML.":
-                            # O Jinja indica a linha do erro em g_erro.lineno
-                            linhas = contexto_texto.splitlines()
-                            linha_erro = g_erro.lineno if g_erro.lineno else 1
-                            # Pega 15 linhas antes e 5 depois do ponto crítico
-                            inicio = max(0, linha_erro - 15)
-                            fim = min(len(linhas), linha_erro + 5)
-                            contexto_texto = "\n".join(linhas[inicio:fim])
+                        # 1. Tenta pegar o XML direto do atributo 'source' do Jinja2
+                        if hasattr(g_erro, 'source') and g_erro.source:
+                            xml_completo = g_erro.source
+        
+                        # 2. Se não estiver no source, busca no escopo do 'secretary' via traceback
+                        if not xml_completo:
+                            _, _, tb = sys.exc_info()
+                            while tb:
+                                if "xml_source" in tb.tb_frame.f_locals:
+                                    try:
+                                        raw_bytes = tb.tb_frame.f_locals["xml_source"]
+                                        xml_completo = raw_bytes.decode('utf-8', errors='ignore')
+                                        break
+                                    except:
+                                        pass
+                                tb = tb.tb_next
 
-                        st.error(f"❌ **Erro de Sintaxe detectado no Template .odt!**")
-                        st.markdown(f"**Motivo do travamento:** {g_erro.message} (Linha XML: {g_erro.lineno})")
-                        st.markdown("**Trecho exato do documento onde a leitura travou:**")
-                        st.code(contexto_texto, language="xml")
+                        # 3. Tratamento do texto usando localização por caractere (Já que lineno é sempre 1)
+                        if xml_completo:
+                            # O Jinja2 não divide XML por linhas, procuramos a tag com erro perto do Jinja
+                            # Buscando trechos comuns de tags incompletas ou próximas do erro
+                            posicao_erro = xml_completo.find("{%")
+                            if posicao_erro == -1:
+                                posicao_erro = xml_completo.find("{{")
+
+                            if posicao_erro != -1:
+                                # Recorta margem de 400 caracteres antes e depois do ponto crítico
+                                inicio = max(0, posicao_erro - 400)
+                                fim = min(len(xml_completo), posicao_erro + 600)
+                                contexto_texto = xml_completo[inicio:fim]
+                            else:
+                                contexto_texto = xml_completo[:1000]
+                
+                            st.markdown("**Trecho aproximado do documento XML onde a leitura travou:**")
+                            st.code(f"... {contexto_texto} ...", language="xml")
+                        else:
+                            st.warning("⚠️ Não foi possível resgatar o XML fonte do erro.")
+            
                     else:
                         st.error(f"Engenharia de automação Falhou na esteira: {str(g_erro)}")
+
                       
     else:
         st.error("⛔ A emissão do relatório oficial em PDF é restrita ao Administrador.")
