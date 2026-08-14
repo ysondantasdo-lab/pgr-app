@@ -1219,6 +1219,7 @@ if aba_selecionada == "Relatório Completo":
                         "inventarios": riscos_faixas
                     })
                     # --------------------------------------------------------------------------
+                  
 
                     # Criação de IDs únicos para evitar conflitos de múltiplos usuários
                     id_unico = uuid.uuid4().hex
@@ -1228,6 +1229,13 @@ if aba_selecionada == "Relatório Completo":
 
                     # Baixar ODT pelo ID da API
                     request = drive_service.files().get_media(fileId=ODT_TEMPLATE_ID)
+
+                    # === ADICIONE ESTAS 3 LINHAS EXATAMENTE AQUI ===
+                    request.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                    request.headers['Pragma'] = 'no-cache'
+                    request.headers['Expires'] = '0'
+                    # ===============================================
+
                     fh = io.BytesIO()
                     downloader = MediaIoBaseDownload(fh, request)
                     done = False
@@ -1238,6 +1246,10 @@ if aba_selecionada == "Relatório Completo":
                     with open(template_path, "wb") as f:
                         f.write(fh.getvalue())
 
+
+
+
+                    
                     # === CORREÇÃO: Remove entidades XML sacanas (&#199;, etc) do content.xml antes do Jinja2 processar ===
                     pasta_extracao = f"/tmp/extracao_{id_unico}"
                     with zipfile.ZipFile(template_path, 'r') as zip_ref:
