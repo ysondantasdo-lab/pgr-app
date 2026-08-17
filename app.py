@@ -23,6 +23,8 @@ import html
 import re
 import shutil
 import time 
+from docxtpl import DocxTemplate
+
 
 
 # Estrutura para a Inteligência Artificial do Gemini entregar os dados organizados
@@ -36,46 +38,6 @@ class RiscoEstruturado(BaseModel):
 class SugestaoPGR(BaseModel):
     riscos: List[RiscoEstruturado]
     
-# ==============================================================================
-# PIPELINE DE HIGIENIZAÇÃO GLOBAL (INSIRA EXATAMENTE ESTE BLOCO AQUI)
-# ==============================================================================
-def pipeline_higienizacao_template(caminho_odt: str) -> None:
-    """
-    Função global para limpar o XML do ODT antes de passar para o Jinja2/Secretary.
-    Conserta caracteres especiais, tags quebradas e corrige tabelas mal estruturadas automaticamente.
-    """
-    pasta_extracao = caminho_odt + "_workspace"
-    
-    # Descompacta o ODT (que é um arquivo ZIP por dentro)
-    with zipfile.ZipFile(caminho_odt, 'r') as zip_ref:
-        zip_ref.extractall(pasta_extracao)
-        
-    xml_content_path = os.path.join(pasta_extracao, "content.xml")
-    
-    if os.path.exists(xml_content_path):
-        with open(xml_content_path, "r", encoding="utf-8") as f:
-            conteudo_xml = f.read()
-            
-        # 1. Corrige caracteres acentuados (transforma &#199; em Ç)
-        conteudo_xml = html.unescape(conteudo_xml)
-        
-        # 2. Limpa tags de estilo que o LibreOffice enfia no meio dos comandos do Jinja
-        conteudo_xml = re.sub(r'({%.*?})(<.*?>)(.*?%})', r'\1\3', conteudo_xml)
-        conteudo_xml = re.sub(r'({{.*?})(<.*?>)(.*?}})', r'\1\3', conteudo_xml)
-        
-        # 3. Força a conversão do {% for %} em tabela para a sintaxe nativa {% def %} do secretary
-        conteudo_xml = re.sub(r'{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%}', r'{% def \1=\2 %}', conteudo_xml)
-        conteudo_xml = conteudo_xml.replace("{% endfor %}", "")
-        
-        with open(xml_content_path, "w", encoding="utf-8") as f:
-            f.write(conteudo_xml)
-            
-    # Compacta tudo de volta no arquivo original
-    if os.path.exists(caminho_odt):
-        os.remove(caminho_odt)
-    shutil.make_archive(pasta_extracao, 'zip', pasta_extracao)
-    shutil.move(pasta_extracao + ".zip", caminho_odt)
-    shutil.rmtree(pasta_extracao)
 # ==============================================================================
 
 
@@ -111,7 +73,7 @@ try:
     gc, drive_service = setup_gcp()
     DB_SHEET_ID = st.secrets["app_settings"]["DB_SHEET_ID"]
     DADOS_SHEET_ID = st.secrets["app_settings"]["DADOS_SHEET_ID"]
-    ODT_TEMPLATE_ID = st.secrets["app_settings"]["ODT_TEMPLATE_ID"]
+    DOCX_TEMPLATE_ID = st.secrets["app_settings"]["DOCX_TEMPLATE_ID"]
     ADMIN_PWD = st.secrets["auth"]["admin_password"]
     USER_PWD = st.secrets["auth"]["user_password"]
 except Exception as e:
@@ -1211,7 +1173,7 @@ if aba_selecionada == "Consulta":
 
 
 # ==============================================================================
-# ABA 3: RELATÓRIO DO PGR E MÓDULO ODT
+# ABA 3: RELATÓRIO DO PGR E MÓDULO DOCX
 # ==============================================================================
 
 if aba_selecionada == "Relatório Completo":
@@ -1220,7 +1182,7 @@ if aba_selecionada == "Relatório Completo":
     
     st.subheader("Equipe Técnica do SESMT")
     df_resp = pd.DataFrame([{"nome": "Nome Exemplo", "matricula": "0000", "funcao": "Cargo", "conselho": "Registro"}])
-    st.write("Edite os dados na tabela abaixo para inclusão automatizada na página 2 do Relatório .odt:")
+    st.write("Edite os dados na tabela abaixo para inclusão automatizada na página 2 do Relatório .docx:")
     edited_sesmt = st.data_editor(df_resp, num_rows="dynamic", key="sesmt_edit_v2", use_container_width=True)
     
     responsaveis_assign = st.multiselect("Selecione quem fará a ASSINATURA final no relatório:", edited_sesmt["nome"].tolist())
@@ -1236,7 +1198,7 @@ if aba_selecionada == "Relatório Completo":
 
     if st.session_state["usuario_perfil"] == "Admin":
         if st.button("📄 GERAR RELATÓRIO PGR OFICIAL (PDF/LibreOffice)"):
-            with st.spinner("Processando Integração Automática ODT-PDF via Secretary engine..."):
+            with st.spinner("Processando Integração Automática DOCX-PDF via Secretary engine..."):
                 try:
                     sec_dados = df_sec[df_sec["Nome do Órgão"] == sec_selecionada_relatorio].iloc[0]
                     id_ss = sec_dados["Id_Secretaria"]
@@ -1336,24 +1298,26 @@ if aba_selecionada == "Relatório Completo":
                         "responsaveis": edited_sesmt[edited_sesmt["nome"].isin(responsaveis_assign)].to_dict("records"),
                         "inventarios": riscos_faixas
                     })
+               
+                    
                     # --------------------------------------------------------------------------
-                  
+                    # MÓDULO DE EMISSÃO: MOTOR AUTOMÁTICO WORD (.DOCX) PARA PDF
+                    # --------------------------------------------------------------------------
 
                     # Criação de IDs únicos para evitar conflitos de múltiplos usuários
                     id_unico = uuid.uuid4().hex
-                    template_path = f"/tmp/base_{id_unico}.odt"
-                    odt_out = f"/tmp/relatorio_{id_unico}.odt"
+                    template_path = f"/tmp/base_{id_unico}.docx"
+                    docx_out = f"/tmp/relatorio_{id_unico}.docx"
                     pdf_path = f"/tmp/relatorio_{id_unico}.pdf"
 
-                    # Baixar ODT pelo ID da API
-                    request = drive_service.files().get_media(fileId=ODT_TEMPLATE_ID)
+                    # Baixar DOCX pelo ID da API
+                    request = drive_service.files().get_media(fileId=DOCX_TEMPLATE_ID)
 
-                    # === ADICIONE ESTAS 3 LINHAS EXATAMENTE AQUI ===
+                    # === Configurações de cabeçalho para evitar cache ===
                     request.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
                     request.headers['Pragma'] = 'no-cache'
                     request.headers['Expires'] = '0'
-                    # ===============================================
-
+                
                     fh = io.BytesIO()
                     downloader = MediaIoBaseDownload(fh, request)
                     done = False
@@ -1363,81 +1327,43 @@ if aba_selecionada == "Relatório Completo":
                     # Só grava o arquivo depois que o download estiver 100% completo
                     with open(template_path, "wb") as f:
                         f.write(fh.getvalue())
-                        
-                    pipeline_higienizacao_template(template_path)
 
-                    # Agora a renderização do Secretary/Jinja ocorre de forma segura
-                    resultado_odt = engine.render(template_path, **parametros)
-                    with open(odt_out, 'wb') as fout:
-                        fout.write(resultado_odt)
+                    # --- ENTRADA DO NOVO MOTOR DOCXTPL COM TRATAMENTO DE ERROS ALINHADO ---
+                    try:
+                        # 1. Abre o arquivo Word, processa o dicionário 'parametros' e salva o resultado
+                        doc = DocxTemplate(template_path)
+                        doc.render(parametros)
+                        doc.save(docx_out)
 
-                    # Comando usando caminhos dinâmicos e isolados
-                    comando = ['soffice', '--headless', '--convert-to', 'pdf', '--outdir', '/tmp', odt_out]
-                    subprocess.run(comando, check=True)
-                                      
-                    with open(pdf_path, "rb") as pdf_file:
-                        pdf_bytes = pdf_file.read()
-    
-                    st.success("✅ Relatório PGR Oficial processado com sucesso!")
-                    st.download_button("📥 Download Arquivo Validado (PDF)", data=pdf_bytes, file_name=f"PGR_{sec_selecionada_relatorio}.pdf", mime="application/pdf")
-
-                    # Limpeza imediata dos arquivos temporários dinâmicos
-                    for arquivo in [template_path, odt_out, pdf_path]:
-                        if os.path.exists(arquivo):
-                            os.remove(arquivo)
-            
-               
-                except Exception as g_erro:
-                    if isinstance(g_erro, jinja2.exceptions.TemplateSyntaxError):
-                        st.error("❌ **Erro de Sintaxe detectado no Template .odt!**")
+                        # 2. Executa a conversão do Word (.docx) para PDF via LibreOffice Headless
+                        comando = ['soffice', '--headless', '--convert-to', 'pdf', '--outdir', '/tmp', docx_out]
+                        subprocess.run(comando, check=True)
+                                          
+                        # 3. Lê o arquivo PDF gerado para disponibilizar ao usuário
+                        with open(pdf_path, "rb") as pdf_file:
+                            pdf_bytes = pdf_file.read()
         
-                        # g_erro.message pode não existir em versões novas; g_erro.name ou str(g_erro) é mais seguro
-                        mensagem_erro = getattr(g_erro, 'message', str(g_erro))
-                        st.markdown(f"**Motivo do travamento:** {mensagem_erro}")
-        
-                        xml_completo = None
+                        st.success("✅ Relatório PGR Oficial processado com sucesso!")
+                        st.download_button(
+                            label="📥 Download Arquivo Validado (PDF)", 
+                            data=pdf_bytes, 
+                            file_name=f"PGR_{sec_selecionada_relatorio}.pdf", 
+                            mime="application/pdf"
+                        )
 
-                        # 1. Tenta pegar o XML direto do atributo 'source' do Jinja2
-                        if hasattr(g_erro, 'source') and g_erro.source:
-                            xml_completo = g_erro.source
-        
-                        # 2. Se não estiver no source, busca no escopo do 'secretary' via traceback
-                        if not xml_completo:
-                            _, _, tb = sys.exc_info()
-                            while tb:
-                                if "xml_source" in tb.tb_frame.f_locals:
-                                    try:
-                                        raw_bytes = tb.tb_frame.f_locals["xml_source"]
-                                        xml_completo = raw_bytes.decode('utf-8', errors='ignore')
-                                        break
-                                    except:
-                                        pass
-                                tb = tb.tb_next
 
-                        # 3. Tratamento do texto usando localização por caractere (Já que lineno é sempre 1)
-                        if xml_completo:
-                            # O Jinja2 não divide XML por linhas, procuramos a tag com erro perto do Jinja
-                            # Buscando trechos comuns de tags incompletas ou próximas do erro
-                            posicao_erro = xml_completo.find("{%")
-                            if posicao_erro == -1:
-                                posicao_erro = xml_completo.find("{{")
+                    except Exception as docx_err:
+                        # Se houver um erro de digitação de tag no Word, o docxtpl avisa aqui de forma limpa
+                        st.error("⚠️ **Erro de Processamento no Documento:** Não foi possível aplicar os dados ao modelo Word.")
+                        st.markdown(f"Detalhes do erro técnico: `{str(docx_err)}`")
+                        st.info("Dica: Verifique se todas as tags '{{' e '{%' estão fechadas corretamente dentro do arquivo do Word.")
 
-                            if posicao_erro != -1:
-                                # Recorta margem de 400 caracteres antes e depois do ponto crítico
-                                inicio = max(0, posicao_erro - 400)
-                                fim = min(len(xml_completo), posicao_erro + 600)
-                                contexto_texto = xml_completo[inicio:fim]
-                            else:
-                                contexto_texto = xml_completo[:1000]
-                
-                            st.markdown("**Trecho aproximado do documento XML onde a leitura travou:**")
-                            st.code(f"... {contexto_texto} ...", language="xml")
-                        else:
-                            st.warning("⚠️ Não foi possível resgatar o XML fonte do erro.")
-            
-                    else:
-                        st.error(f"Engenharia de automação Falhou na esteira: {str(g_erro)}")
-
+                    finally:
+                        # Limpeza imediata de todos os arquivos temporários criados nesta execução
+                        for arquivo in [template_path, docx_out, pdf_path]:
+                            if os.path.exists(arquivo):
+                                os.remove(arquivo)
+      
                       
     else:
         st.error("⛔ A emissão do relatório oficial em PDF é restrita ao Administrador.")
