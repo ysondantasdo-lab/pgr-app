@@ -22,6 +22,8 @@ import zipfile
 import html
 import re
 import shutil
+import time 
+
 
 # Estrutura para a Inteligência Artificial do Gemini entregar os dados organizados
 class RiscoEstruturado(BaseModel):
@@ -115,6 +117,54 @@ try:
 except Exception as e:
     st.error("🚨 Erro na configuração. Verifique os Streamlit Secrets nas opções avançadas de deploy.")
     st.stop()
+
+# =========================================================================
+# NOVA FUNÇÃO DE LEITURA PROTEGIDA COM RECONEXÃO AUTOMÁTICA E MENSAGEM VISUAL
+# =========================================================================
+@st.cache_data
+def load_tabela(nome):
+    tentativas_maximas = 3
+    tempo_espera = 4  # segundos entre as tentativas
+    
+    for tentativa in range(tentativas_maximas):
+        try:
+            sh = gc.open_by_key(DB_SHEET_ID)
+            worksheet = sh.worksheet(nome)
+            data = worksheet.get_all_records()
+            if not data:
+                return pd.DataFrame(columns=ESTRUTURA_TABS[nome])
+            return pd.DataFrame(data)
+            
+        except gspread.exceptions.WorksheetNotFound:
+            # Caso a aba realmente não exista, mantém o comportamento original de criá-la
+            sh = gc.open_by_key(DB_SHEET_ID)
+            ws = sh.add_worksheet(title=nome, rows="1000", cols="20")
+            ws.append_row(ESTRUTURA_TABS[nome])
+            return pd.DataFrame(columns=ESTRUTURA_TABS[nome])
+            
+        except Exception as e:
+            # Se for a última tentativa e ainda falhar, mostra o erro técnico
+            if tentativa == tentativas_maximas - 1:
+                st.error(f"Não foi possível reestabelecer a conexão com a base de dados '{nome}'. Detalhes: {e}")
+                st.stop()
+            
+            # Mensagem visual, clara e acolhedora para o usuário leigo
+            aviso_placeholder = st.warning(
+                f"⏳ **Aviso de Instabilidade:** Detectamos uma oscilação temporária nos servidores do Google Sheets "
+                f"ao carregar dados de '{nome}'. Não se preocupe, estamos resolvendo isso para você! "
+                f"Ajustando conexão automática (Tentativa {tentativa + 1} de {tentativas_maximas})..."
+            )
+            
+            # Aguarda o tempo estipulado e limpa a sessão do gspread para forçar uma nova rota de rede
+            time.sleep(tempo_espera)
+            try:
+                gc.login() # Tenta reautenticar silenciosamente a sessão ativa
+            except:
+                pass
+                
+            # Limpa o aviso flutuante da tela antes da próxima tentativa para o layout ficar limpo
+            aviso_placeholder.empty()
+# FIM DA PROTEÇÃO CONTRA INSTABILIDADE DO GOOGLESHEETS
 
 if "usuario_perfil" not in st.session_state:
     st.session_state["usuario_perfil"] = None
