@@ -539,26 +539,47 @@ if aba_selecionada == "Cadastro Interativo":
         st.session_state["ia_sugestoes"] = []
 
     if st.button("🪄 Sugerir Riscos com IA (Gemini)", use_container_width=True):
-        if not desc_atv or not cargo_selecionado:
-            st.error("Por favor, preencha o Cargo e a Descrição da Atividade para a IA analisar.")
+        if not desc_atv or not cargo_selecionado or not funcao_text:
+            st.error("Por favor, preencha o Cargo, a Função Exercida e a Descrição da Atividade para a IA analisar.")
         else:
             with st.spinner("O Gemini está analisando o ambiente de trabalho..."):
-                try:
-                    client = genai.Client(api_key=st.secrets["auth"]["GEMINI_API_KEY"])
-                    prompt = f"Atue como um Engenheiro de Segurança do Trabalho Sênior. Analise o cargo '{cargo_selecionado}' que realiza a atividade: '{desc_atv}'. Gere uma lista de riscos ambientais previsíveis seguindo as diretrizes da NR-01."
-                    response = client.models.generate_content(
-                        model='gemini-2.5-flash',
-                        contents=prompt,
-                        config={
-                            "response_mime_type": "application/json",
-                            "response_schema": SugestaoPGR
-                        }
-                    )
-                    st.session_state["ia_sugestoes"] = response.parsed.riscos
-                    st.success("Sugestões geradas com sucesso!")
-                except Exception as ai_err:
-                    st.error(f"Erro na IA: {ai_err}")
+                tentativas_maximas = 3
+                tempo_espera = 3  # segundos entre as tentativas
+                sucesso_ia = False
 
+                for tentativa in range(tentativas_maximas):               
+                    try:
+                        client = genai.Client(api_key=st.secrets["auth"]["GEMINI_API_KEY"])
+                        prompt = f"Atue como um Engenheiro de Segurança do Trabalho Sênior. Analise o cargo '{cargo_selecionado}' exercendo a função de '{funcao_text}' que realiza a atividade: '{desc_atv}'. Gere uma lista de riscos ambientais previsíveis seguindo as diretrizes da NR-01."
+                        response = client.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=prompt,
+                            config={
+                                "response_mime_type": "application/json",
+                                "response_schema": SugestaoPGR
+                            }
+                        )
+                        # Se chegou aqui com dados válidos, salva e encerra o loop de tentativas
+                        st.session_state["ia_sugestoes"] = response.parsed.riscos
+                        st.success("Sugestões geradas com sucesso!")
+                        sucesso_ia = True
+                        break
+                    except Exception as ai_err:
+                        if tentativa == tentativas_maximas - 1:
+                            st.error(
+                                "⚠️ **Instabilidade no Gemini. A reconexão será automática.** Se o erro persistir, melhore o cargo, a função ou a descrição das atividades."
+                            )
+                            break
+                    
+                        aviso_ia_placeholder = st.warning(
+                            f"⏳ **Aviso de Oscilação:** O servidor de Inteligência Artificial demorou para responder. "
+                            f"Estamos ajustando o canal de comunicação para tentar novamente de forma automática... "
+                            f"(Tentativa {tentativa + 1} de {tentativas_maximas})"
+                        )
+                    
+                        time.sleep(tempo_espera)
+                        aviso_ia_placeholder.empty()
+     
     if st.session_state["ia_sugestoes"]:
         for idx_ia, item_ia in enumerate(st.session_state["ia_sugestoes"]):
             with st.expander(f"💡 Sugestão {idx_ia + 1}: {item_ia.fator_risco}"):
