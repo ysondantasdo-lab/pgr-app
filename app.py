@@ -1352,17 +1352,17 @@ if aba_selecionada == "Relatório Completo":
                         )
 
 
-                    except Exception as docx_err:
-                        # Se houver um erro de digitação de tag no Word, o docxtpl avisa aqui de forma limpa
-                        st.error("⚠️ **Erro de Processamento no Documento:** Não foi possível aplicar os dados ao modelo Word.")
-                        st.markdown(f"Detalhes do erro técnico: `{str(docx_err)}`")
-                        st.info("Dica: Verifique se todas as tags '{{' e '{%' estão fechadas corretamente dentro do arquivo do Word.")
+                        except Exception as docx_err:
+                            # Se houver um erro de digitação de tag no Word, o docxtpl avisa aqui de forma limpa
+                            st.error("⚠️ **Erro de Processamento no Documento:** Não foi possível aplicar os dados ao modelo Word.")
+                            st.markdown(f"Detalhes do erro técnico: `{str(docx_err)}`")
+                            st.info("Dica: Verifique se todas as tags '{{' e '{%' estão fechadas corretamente dentro do arquivo do Word.")
 
-                    finally:
-                        # Limpeza imediata de todos os arquivos temporários criados nesta execução
-                        for arquivo in [template_path, docx_out, pdf_path]:
-                            if os.path.exists(arquivo):
-                                os.remove(arquivo)
+                        finally:
+                            # Limpeza imediata de todos os arquivos temporários criados nesta execução
+                            for arquivo in [template_path, docx_out, pdf_path]:
+                                if os.path.exists(arquivo):
+                                    os.remove(arquivo)
       
                       
     else:
