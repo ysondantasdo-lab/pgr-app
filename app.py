@@ -1338,11 +1338,11 @@ if aba_selecionada == "Relatório Completo":
                         # 2. Executa a conversão do Word (.docx) para PDF via LibreOffice Headless
                         comando = ['soffice', '--headless', '--convert-to', 'pdf', '--outdir', '/tmp', docx_out]
                         subprocess.run(comando, check=True)
-                                          
+
                         # 3. Lê o arquivo PDF gerado para disponibilizar ao usuário
                         with open(pdf_path, "rb") as pdf_file:
                             pdf_bytes = pdf_file.read()
-        
+
                         st.success("✅ Relatório PGR Oficial processado com sucesso!")
                         st.download_button(
                             label="📥 Download Arquivo Validado (PDF)", 
@@ -1351,18 +1351,18 @@ if aba_selecionada == "Relatório Completo":
                             mime="application/pdf"
                         )
 
+                    except Exception as docx_err:
+                        # Se houver um erro de digitação de tag no Word, o docxtpl avisa aqui de forma limpa
+                        st.error("⚠️ **Erro de Processamento no Documento:** Não foi possível aplicar os dados ao modelo Word.")
+                        st.markdown(f"Detalhes do erro técnico: `{str(docx_err)}`")
+                        st.info("Dica: Verifique se todas as tags '{{' e '{%' estão fechadas corretamente dentro do arquivo do Word.")
 
-                        except Exception as docx_err:
-                            # Se houver um erro de digitação de tag no Word, o docxtpl avisa aqui de forma limpa
-                            st.error("⚠️ **Erro de Processamento no Documento:** Não foi possível aplicar os dados ao modelo Word.")
-                            st.markdown(f"Detalhes do erro técnico: `{str(docx_err)}`")
-                            st.info("Dica: Verifique se todas as tags '{{' e '{%' estão fechadas corretamente dentro do arquivo do Word.")
+                    finally:
+                        # Limpeza imediata de todos os arquivos temporários criados nesta execução
+                        for arquivo in [template_path, docx_out, pdf_path]:
+                            if os.path.exists(arquivo):
+                                os.remove(arquivo)
 
-                        finally:
-                            # Limpeza imediata de todos os arquivos temporários criados nesta execução
-                            for arquivo in [template_path, docx_out, pdf_path]:
-                                if os.path.exists(arquivo):
-                                    os.remove(arquivo)
       
                       
     else:
