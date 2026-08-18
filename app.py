@@ -1199,7 +1199,7 @@ if aba_selecionada == "Relatório Completo":
     if st.session_state["usuario_perfil"] == "Admin":
         if st.button("📄 GERAR RELATÓRIO PGR OFICIAL (PDF/LibreOffice)"):
             with st.spinner("Processando Integração Automática DOCX-PDF via Secretary engine..."):
-                try:
+                
                     sec_dados = df_sec[df_sec["Nome do Órgão"] == sec_selecionada_relatorio].iloc[0]
                     id_ss = sec_dados["Id_Secretaria"]
                     df_rel_lotacao = load_tabela("Secretaria_Lotacao")
@@ -1328,11 +1328,7 @@ if aba_selecionada == "Relatório Completo":
                     with open(template_path, "wb") as f:
                         f.write(fh.getvalue())
 
-                     # ─── AQUI VOCÊ FECHA O PRIMEIRO TRY (AQUELE LÁ DO TOPO) ───
-                    except Exception as erro_dados:
-                        st.error("⚠️ **Erro na coleta de dados:** Não foi possível processar as tabelas ou o download.")
-                        st.markdown(f"Detalhes técnicos: `{str(erro_dados)}`")
-                        st.stop() # Para o código aqui se os dados falharem
+
 
                     # --- ENTRADA DO NOVO MOTOR DOCXTPL COM TRATAMENTO DE ERROS ALINHADO ---
                     try:
