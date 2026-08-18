@@ -1363,10 +1363,9 @@ if aba_selecionada == "Relatório Completo":
                             if os.path.exists(arquivo):
                                 os.remove(arquivo)
 
-      
-                      
-    else:
-        st.error("⛔ A emissão do relatório oficial em PDF é restrita ao Administrador.")
+else:
+    st.error("⛔ A emissão do relatório oficial em PDF é restrita ao Administrador.")
+
 
 def main():
     pass
