@@ -1328,6 +1328,12 @@ if aba_selecionada == "Relatório Completo":
                     with open(template_path, "wb") as f:
                         f.write(fh.getvalue())
 
+                     # ─── AQUI VOCÊ FECHA O PRIMEIRO TRY (AQUELE LÁ DO TOPO) ───
+                    except Exception as erro_dados:
+                        st.error("⚠️ **Erro na coleta de dados:** Não foi possível processar as tabelas ou o download.")
+                        st.markdown(f"Detalhes técnicos: `{str(erro_dados)}`")
+                        st.stop() # Para o código aqui se os dados falharem
+
                     # --- ENTRADA DO NOVO MOTOR DOCXTPL COM TRATAMENTO DE ERROS ALINHADO ---
                     try:
                         # 1. Abre o arquivo Word, processa o dicionário 'parametros' e salva o resultado
