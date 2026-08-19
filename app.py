@@ -672,7 +672,7 @@ if aba_selecionada == "Cadastro Interativo":
     efeito_atual_sel = c12.selectbox("Efeito (Severidade) Atual", op_ef, key=f"ea_{fk}")
     peso_e_atual = int(str(efeito_atual_sel).split(" - ")[0])
     
-    val_x_atual, niv_atual, class_atual, _ = calcula_matriz(peso_p_atual, peso_e_atual)
+    val_x_atual, niv_atual, class_atual, imediata_atual = calcula_matriz(peso_p_atual, peso_e_atual)
     st.warning(f"**Cálculo Automático Matriz Multiplicação Probabilidade x Efeito:** Valor {val_x_atual} -> Nível Calculado '{niv_atual}' / Classificação Calculada '{class_atual}'")
     
     st.markdown("##### FAIXA 4: Plano de Ação (Medidas Propostas)")
@@ -708,10 +708,10 @@ if aba_selecionada == "Cadastro Interativo":
 
     st.text_area(
         label="👉 Imediata (Preenchimento Automático):",
-        value=imediata_prop,
+        value=imediata_atual,
         height=100,          # Altura inicial confortável
         disabled=True,      # CORREÇÃO: Bloqueia a digitação mas mantém o visual 100% nítido
-        key=f"imediata_show_{fk}_{val_x_prop}"   # <-- key agora inclui val_x_prop
+        key=f"imediata_show_{fk}_{val_x_atual}"   # <-- key agora inclui val_x_prop
     )
     
     c15, c16 = st.columns(2)
