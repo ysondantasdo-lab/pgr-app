@@ -1186,6 +1186,9 @@ if aba_selecionada == "Relatório Completo":
     edited_sesmt = st.data_editor(df_resp, num_rows="dynamic", key="sesmt_edit_v2", use_container_width=True)
     
     responsaveis_assign = st.multiselect("Selecione quem fará a ASSINATURA final no relatório:", edited_sesmt["nome"].tolist())
+
+    resps_dict = edited_sesmt[edited_sesmt["nome"].isin(responsaveis_assign)].to_dict(orient="records")
+    linhas_assinatura = [resps_dict[i:i + 2] for i in range(0, len(resps_dict), 2)]
     
     st.markdown("---")
     try:
