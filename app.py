@@ -1337,6 +1337,9 @@ if aba_selecionada == "Relatório Completo":
                     try:
                         # 1. Abre o arquivo Word, processa o dicionário 'parametros' e salva o resultado
                         doc = DocxTemplate(template_path)
+                        
+                        parametros['linhas_assinatura'] = linhas_assinatura
+
                         doc.render(parametros)
                         doc.save(docx_out)
 
