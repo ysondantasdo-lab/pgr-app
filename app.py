@@ -784,19 +784,26 @@ if aba_selecionada == "Cadastro Interativo":
         }
           
         
-        
+                        
+        # TRECHO MODIFICADO COM ALERTA DE SALVAMENTO OBRIGATÓRIO:
         if idx_edicao is not None:
             # 📝 MODO EDIÇÃO: Substitui na mesma posição da lista antiga
             st.session_state["lista_riscos"][idx_edicao] = novo_risco
             st.session_state["indice_em_edicao"] = None  # Reseta o estado para livre
-            st.success("Risco alterado com sucesso!")
+            
+            # Mensagem combinando o sucesso com a instrução do próximo passo obrigatório
+            st.success("Risco alterado com sucesso na listagem temporária!")
+            st.warning("⚠️ **Atenção:** Suas alterações ainda NÃO foram salvas definitivamente. Para gravar no banco de dados, você DEVE clicar no botão verde abaixo: 'Salvar Cadastro Geral na Nuvem (Função + Riscos)' antes de sair.")
         else:
             # ➕ MODO NOVO: Insere no final da lista normalmente
             st.session_state["lista_riscos"].append(novo_risco)
             st.session_state["fk"] += 1
-            st.success("Risco inserido com sucesso!")
+            
+            st.success("Risco inserido com sucesso na listagem temporária!")
+            st.info("💡 **Próximo Passo Obrigatório:** Para gravar de forma definitiva este e os demais riscos no banco de dados, lembre-se de clicar no botão 'Salvar Cadastro Geral na Nuvem (Função + Riscos)' ao final da página.")
         
-        st.rerun()
+        # REMOVIDO st.rerun() daqui para a mensagem fixar na tela e o usuário conseguir ler o aviso antes do refresh!
+
 
     st.markdown("---")
 
