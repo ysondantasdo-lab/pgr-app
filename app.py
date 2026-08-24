@@ -194,12 +194,24 @@ def load_tabela(nome):
         ws.append_row(ESTRUTURA_TABS[nome])
         return pd.DataFrame(columns=ESTRUTURA_TABS[nome])
 
+# TRECHO MODIFICADO E CORRIGIDO PARA EVITAR ERRO 400:
 def save_tabela(nome, df):
     sh = gc.open_by_key(DB_SHEET_ID)
     worksheet = sh.worksheet(nome)
     worksheet.clear()
-    df_limpo = df.fillna("").astype(str)
-    worksheet.update([df_limpo.columns.values.tolist()] + df_limpo.values.tolist())
+    
+    # Garante a eliminação completa de NaNs, nulos e converte tudo estritamente para string de texto comum
+    df_limpo = df.copy()
+    df_limpo = df_limpo.fillna("").astype(str)
+    
+    # Monta a estrutura da planilha juntando cabeçalho + linhas em listas puras de Python
+    cabecalho = df_limpo.columns.tolist()
+    linhas_dados = df_limpo.values.tolist()
+    matriz_final = [cabecalho] + linhas_dados
+    
+    # CORREÇÃO: Força a gravação a partir da célula A1 usando a sintaxe atualizada aceita pela API
+    worksheet.update(range_name='A1', values=matriz_final)
+
     
 
 def proximo_id(df, col_pk):
