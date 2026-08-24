@@ -15,7 +15,7 @@ from google import genai
 from pydantic import BaseModel, Field
 from typing import List
 import unicodedata  # Certifique-se de importar no topo do arquivo
-from secretary import Renderer
+
 import traceback
 import sys
 import zipfile
@@ -1257,7 +1257,7 @@ if aba_selecionada == "Relatório Completo":
 
     if st.session_state["usuario_perfil"] == "Admin":
         if st.button("📄 GERAR RELATÓRIO PGR OFICIAL (PDF/LibreOffice)"):
-            with st.spinner("Processando Integração Automática DOCX-PDF via Secretary engine..."):
+            with st.spinner("Processando Integração Automática DOCX-PDF via motor DocxTemplate..."):
                 
                     sec_dados = df_sec[df_sec["Nome do Órgão"] == sec_selecionada_relatorio].iloc[0]
                     id_ss = sec_dados["Id_Secretaria"]
@@ -1331,9 +1331,7 @@ if aba_selecionada == "Relatório Completo":
                             "riscos": lista_riscos_funcao
                         })
 
-                    # Engine Secretary Data
-                    engine = Renderer()
-                    
+                                        
                     # Filtro recursivo para normalizar strings de formulários e tabelas dinâmicas
                     def _limpar(d):
                         if isinstance(d, dict): return {k: _limpar(v) for k, v in d.items()}
