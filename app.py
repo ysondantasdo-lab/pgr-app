@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import gspread
-from gspread_dataframe import set_with_dataframe
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
@@ -313,16 +312,16 @@ def sincronizar_tabelas_entidades(is_initial=False):
 
             # RETORNO AO CÓDIGO ORIGINAL SEGURO (MÍNIMA ALTERAÇÃO):
             # --- 3. Sincronizar Tipo de Medida Proposta (Classificação) ---
-            if nome_aba == "Tipo_Medida_Proposta" or "Nome Tipo Medida Proposta" in df_excel.columns:
-                df_tmp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Medida_Proposta"] if c in df_excel.columns]].copy()
-                save_tabela("Tipo_Medida_Proposta", df_tmp_novo)
+            if nome_aba == "Tipo_de_Medida_Proposta" in df_excel.columns:
+                df_tmp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_de_Medida_Proposta"] if c in df_excel.columns]].copy()
+                save_tabela("Tipo_de_Medida_Proposta", df_tmp_novo)
                 st.cache_data.clear() # Mantém apenas a limpeza de memória da tela
                 continue
 
             # --- 4. Sincronizar Tipo de Exposição ---
-            if nome_aba == "Tipo_Exposicao" or "Nome Exposição" in df_excel.columns:
-                df_exp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Exposicao"] if c in df_excel.columns]].copy()
-                save_tabela("Tipo_Exposicao", df_exp_novo)
+            if nome_aba == "Tipo_de_Exposicao" in df_excel.columns:
+                df_exp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_de_Exposicao"] if c in df_excel.columns]].copy()
+                save_tabela("Tipo_de_Exposicao", df_exp_novo)
                 st.cache_data.clear() # Mantém apenas a limpeza de memória da tela
                 continue
 
