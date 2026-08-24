@@ -364,7 +364,12 @@ def sincronizar_tabelas_entidades(is_initial=False):
                         df_risco.loc[len(df_risco)] = [proximo_id(df_risco, "Id_Risco"), risco] 
                 save_tabela("Riscos_Ambientais", df_risco) 
                 continue # Padronizado com os blocos anteriores
- 
+             
+            # 🌟 ADICIONADO: Se qualquer uma das abas falhar, mostra o culpado direto no Streamlit
+            except Exception as erro_interno:
+                st.error(f"🔍 **Rastreador de Erro:** Falha ao processar a aba física '{nome_aba}'.")
+                st.code(f"Colunas lidas nesta aba: {list(df_excel.columns)}\nErro técnico recebido: {str(erro_interno)}")
+                st.stop()
 
  
                 
