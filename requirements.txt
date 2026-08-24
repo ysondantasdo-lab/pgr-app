@@ -1,6 +1,7 @@
 streamlit>=1.35.0
 pandas
 gspread
+gspread-dataframe
 google-api-python-client
 google-auth
 secretary==0.2.19
@@ -10,4 +11,3 @@ markupsafe==2.0.1
 google-genai
 docxtpl
 python-docx
-
