@@ -356,7 +356,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
                 continue # Padronizado com os blocos anteriores
             
             # --- 7. Sincronizar Riscos Ambientais --- 
-            if nome_aba == "Riscos Ambientais": 
+            if nome_aba == "Riscos_Ambientais": 
                 riscos = df_excel["Nome Risco"].dropna().unique() 
                 df_risco = df_risco[df_risco["Nome Risco"].isin(riscos)] 
                 for risco in riscos: 
