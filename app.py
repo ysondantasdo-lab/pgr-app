@@ -200,6 +200,12 @@ def save_tabela(nome, df):
     worksheet = sh.worksheet(nome)
     worksheet.clear()
     
+    # 🌟 ADICIONADO APENAS ESTE BLOCO: Se faltar colunas ou dados, avisa o usuário e para aqui
+    if df.empty or len(df.columns) == 0:
+        st.sidebar.warning(f"⚠️ Aba '{nome}' ignorada: Verifique se os nomes das colunas na planilha fonte estão corretos.")
+        return # Para a função aqui para não enviar lixo e evitar o Erro 400
+    
+    # Todo o seu código atual com as muitas linhas continua intacto aqui para baixo:
     # Garante a eliminação completa de NaNs, nulos e converte tudo estritamente para string de texto comum
     df_limpo = df.copy()
     df_limpo = df_limpo.fillna("").astype(str)
@@ -211,6 +217,7 @@ def save_tabela(nome, df):
     
     # CORREÇÃO: Força a gravação a partir da célula A1 usando a sintaxe atualizada aceita pela API
     worksheet.update(range_name='A1', values=matriz_final)
+
 
     
 
