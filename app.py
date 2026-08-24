@@ -195,10 +195,22 @@ def load_tabela(nome):
         ws.append_row(ESTRUTURA_TABS[nome])
         return pd.DataFrame(columns=ESTRUTURA_TABS[nome])
 
-# TRECHO MODIFICADO E CORRIGIDO PARA EVITAR ERRO 400:
+# TRECHO MODIFICADO E CORRIGIDO DE FORMA DEFINITIVA (MÍNIMA ALTERAÇÃO):
 def save_tabela(nome, df):
     sh = gc.open_by_key(DB_SHEET_ID)
     worksheet = sh.worksheet(nome)
+    worksheet.clear()
+    
+    # Converte nulos para texto vazio e transforma tudo estritamente em strings
+    df_limpo = df.fillna("").astype(str)
+    
+    # Une o cabeçalho com as linhas de dados em uma lista nativa limpa
+    corpo_planilha = [df_limpo.columns.tolist()] + df_limpo.values.tolist()
+    
+    # CORREÇÃO DEFINITIVA: Passa a coordenada inicial 'A1' exigida pelo gspread moderno
+    worksheet.update(values=corpo_planilha, range_name='A1')
+    st.cache_data.clear()
+
     
     
     # 🌟 ADICIONADO APENAS ESTE BLOCO: Se faltar colunas ou dados, avisa o usuário e para aqui
