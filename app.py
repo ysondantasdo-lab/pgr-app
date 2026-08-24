@@ -291,26 +291,21 @@ def sincronizar_tabelas_entidades(is_initial=False):
                 save_tabela("Efeito", df_efeito_novo)
                 continue
 
-            # --- 3. Sincronizar Tipo de Medida Proposta ---
-            if nome_aba == "Tipo de Medida Proposta":
-                # Captura a primeira coluna independente do nome e normaliza para a estrutura interna
-                col_real = df_excel.columns[0]
-                df_tmp_novo = pd.DataFrame()
-                df_tmp_novo["Nome Tipo Medida Proposta"] = df_excel[col_real]
-                df_tmp_novo["Id_Tipo_Med_Proposta"] = range(1, len(df_tmp_novo) + 1)
-                df_tmp_novo = df_tmp_novo[["Id_Tipo_Med_Proposta", "Nome Tipo Medida Proposta"]]
+            # RETORNO AO CÓDIGO ORIGINAL SEGURO (MÍNIMA ALTERAÇÃO):
+            # --- 3. Sincronizar Tipo de Medida Proposta (Classificação) ---
+            if nome_aba == "Tipo_Medida_Proposta" or "Nome Tipo Medida Proposta" in df_excel.columns:
+                df_tmp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Medida_Proposta"] if c in df_excel.columns]].copy()
                 save_tabela("Tipo_Medida_Proposta", df_tmp_novo)
+                st.cache_data.clear() # Mantém apenas a limpeza de memória da tela
                 continue
 
             # --- 4. Sincronizar Tipo de Exposição ---
-            if nome_aba == "Tipo de Exposição":
-                col_real = df_excel.columns[0]
-                df_exp_novo = pd.DataFrame()
-                df_exp_novo["Nome Exposição"] = df_excel[col_real]
-                df_exp_novo["Id_Exposição"] = range(1, len(df_exp_novo) + 1)
-                df_exp_novo = df_exp_novo[["Id_Exposição", "Nome Exposição"]]
+            if nome_aba == "Tipo_Exposicao" or "Nome Exposição" in df_excel.columns:
+                df_exp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Exposicao"] if c in df_excel.columns]].copy()
                 save_tabela("Tipo_Exposicao", df_exp_novo)
+                st.cache_data.clear() # Mantém apenas a limpeza de memória da tela
                 continue
+
             
             # --- 5. Sincronizar Secretaria --- 
             if nome_aba == "Secretarias": 
