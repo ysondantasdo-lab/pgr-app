@@ -198,7 +198,7 @@ def load_tabela(nome):
 def save_tabela(nome, df):
     sh = gc.open_by_key(DB_SHEET_ID)
     worksheet = sh.worksheet(nome)
-    worksheet.clear()
+    
     
     # Converte nulos para texto vazio e transforma tudo estritamente em strings
     df_limpo = df.fillna("").astype(str)
@@ -312,23 +312,23 @@ def sincronizar_tabelas_entidades(is_initial=False):
 
             # RETORNO AO CÓDIGO ORIGINAL SEGURO (MÍNIMA ALTERAÇÃO):
             # --- 3. Sincronizar Tipo de Medida Proposta (Classificação) ---
-            if nome_aba == "Tipo_de_Medida_Proposta" in df_excel.columns:
-                df_tmp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_de_Medida_Proposta"] if c in df_excel.columns]].copy()
-                save_tabela("Tipo_de_Medida_Proposta", df_tmp_novo)
+            if nome_aba == "Tipo_Medida_Proposta" in df_excel.columns:
+                df_tmp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Medida_Proposta"] if c in df_excel.columns]].copy()
+                save_tabela("Tipo_Medida_Proposta", df_tmp_novo)
                 st.cache_data.clear() # Mantém apenas a limpeza de memória da tela
                 continue
 
             # --- 4. Sincronizar Tipo de Exposição ---
-            if nome_aba == "Tipo_de_Exposicao" in df_excel.columns:
-                df_exp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_de_Exposicao"] if c in df_excel.columns]].copy()
-                save_tabela("Tipo_de_Exposicao", df_exp_novo)
+            if nome_aba == "Tipo_Exposicao" in df_excel.columns:
+                df_exp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Exposicao"] if c in df_excel.columns]].copy()
+                save_tabela("Tipo_Exposicao", df_exp_novo)
                 st.cache_data.clear() # Mantém apenas a limpeza de memória da tela
                 continue
 
             
-            # RETORNO AO CÓDIGO ORIGINAL SEGURO (MÍNIMA ALTERAÇÃO):
+            # TRECHO MODIFICADO PARA PADRONIZAÇÃO POR NOME DE ABA (MÍNIMA ALTERAÇÃO):
             # --- 5. Sincronizar Secretaria --- 
-            if "Nome do Órgão" in df_excel.columns: 
+            if nome_aba == "Secretarias": 
                 orgaos = df_excel["Nome do Órgão"].dropna().unique() 
                 df_sec = df_sec[df_sec["Nome do Órgão"].isin(orgaos)] 
                 for index, row in df_excel.drop_duplicates(subset=["Nome do Órgão"]).iterrows(): 
@@ -341,25 +341,30 @@ def sincronizar_tabelas_entidades(is_initial=False):
                     else: 
                         df_sec.loc[len(df_sec)] = [proximo_id(df_sec, "Id_Secretaria"), nome, row.get("Sigla", ""), row.get("Endereço", ""), row.get("CNPJ", ""), row.get("CNAE", ""), row.get("Descrição CNAE", ""), row.get("Grau de Risco", ""), row.get("Grupo de Risco", "")] 
                 save_tabela("Secretaria", df_sec) 
+                continue # Padronizado com os blocos anteriores
             
             # --- 6. Sincronizar Cargo --- 
-            col_cargo = "Nome do Cargo" if "Nome do Cargo" in df_excel.columns else ("Cargo" if "Cargo" in df_excel.columns else None) 
-            if col_cargo: 
-                cargos = df_excel[col_cargo].dropna().unique() 
-                df_cargo = df_cargo[df_cargo["Nome do Cargo"].isin(cargos)] 
-                for cargo in cargos: 
-                    if cargo not in df_cargo["Nome do Cargo"].values: 
-                        df_cargo.loc[len(df_cargo)] = [proximo_id(df_cargo, "Id_Cargo"), cargo] 
-                save_tabela("Cargo", df_cargo) 
+            if nome_aba == "Cargo": 
+                col_cargo = "Nome do Cargo" if "Nome do Cargo" in df_excel.columns else ("Cargo" if "Cargo" in df_excel.columns else None) 
+                if col_cargo: 
+                    cargos = df_excel[col_cargo].dropna().unique() 
+                    df_cargo = df_cargo[df_cargo["Nome do Cargo"].isin(cargos)] 
+                    for cargo in cargos: 
+                        if cargo not in df_cargo["Nome do Cargo"].values: 
+                            df_cargo.loc[len(df_cargo)] = [proximo_id(df_cargo, "Id_Cargo"), cargo] 
+                    save_tabela("Cargo", df_cargo) 
+                continue # Padronizado com os blocos anteriores
             
             # --- 7. Sincronizar Riscos Ambientais --- 
-            if "Nome Risco" in df_excel.columns: 
+            if nome_aba == "Riscos Ambientais": 
                 riscos = df_excel["Nome Risco"].dropna().unique() 
                 df_risco = df_risco[df_risco["Nome Risco"].isin(riscos)] 
                 for risco in riscos: 
                     if risco not in df_risco["Nome Risco"].values: 
                         df_risco.loc[len(df_risco)] = [proximo_id(df_risco, "Id_Risco"), risco] 
                 save_tabela("Riscos_Ambientais", df_risco) 
+                continue # Padronizado com os blocos anteriores
+ 
 
  
                 
