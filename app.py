@@ -296,7 +296,8 @@ def sincronizar_tabelas_entidades(is_initial=False):
         # Processa cada tabela lida do GSheets do Admin usando os nomes exatos fornecidos
         for nome_aba, df_excel in tabelas_lidas.items(): 
             df_excel.replace("", float("NaN"), inplace=True) 
-            df_excel.ffill(inplace=True) 
+            df_excel.ffill(inplace=True)
+            st.sidebar.write(f"🔄 Processando aba: {nome_aba}")
             
             # --- 1. Sincronizar Probabilidade ---
             if nome_aba == "Probabilidade":
@@ -365,11 +366,6 @@ def sincronizar_tabelas_entidades(is_initial=False):
                 save_tabela("Riscos_Ambientais", df_risco) 
                 continue # Padronizado com os blocos anteriores
              
-            # 🌟 ADICIONADO: Se qualquer uma das abas falhar, mostra o culpado direto no Streamlit
-            except Exception as erro_interno:
-                st.error(f"🔍 **Rastreador de Erro:** Falha ao processar a aba física '{nome_aba}'.")
-                st.code(f"Colunas lidas nesta aba: {list(df_excel.columns)}\nErro técnico recebido: {str(erro_interno)}")
-                st.stop()
 
  
                 
