@@ -905,11 +905,20 @@ if aba_selecionada == "Cadastro Interativo":
                     for linha in linhas_mp:
                         df_mp.loc[len(df_mp)] = linha
                     save_tabela("Risco_Medida_Proposta", df_mp)
-
+                                        
+                    # TRECHO MODIFICADO COM MENSAGEM FIXA DE SALVAMENTO:
                     # --- PREPARA O AMBIENTE PARA O PRÓXIMO LANÇAMENTO ---
+                    st.success("✅ Tudo pronto! O Cadastro Geral (Função e todos os Riscos Mapeados) foi gravado com total sucesso no banco de dados na Nuvem!")
+                    
                     st.session_state["lista_riscos"] = []
-                    st.session_state["cadastro_salvo_sucesso"] = True  # Ativa o gatilho da mensagem flutuante
+                    st.session_state["cadastro_salvo_sucesso"] = True  # Mantém o gatilho ativo para segurança
+                    
+                    # Aguarda 3 segundos para que o usuário consiga ler a mensagem fixa de sucesso antes de limpar a tela
+                    import time
+                    time.sleep(3)
+                    
                     st.rerun()
+
 
 
                 except Exception as erro_gravacao:
