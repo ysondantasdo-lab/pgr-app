@@ -361,7 +361,7 @@ if st.session_state["usuario_perfil"] == "Admin":
     if st.sidebar.button("🔄 Sincronizar Tabelas (Puxar da Planilha Fonte)"):
         suc, msg = sincronizar_tabelas_entidades(is_initial=False)
         if suc:
-             st.sidebar.success(msg)
+             st.sidebar.success("tabela foi carregada com sucesso")
         else:
              st.sidebar.error(msg)
 
@@ -548,19 +548,19 @@ if aba_selecionada == "Cadastro Interativo":
                 st.write(f"**Fonte:** {item_ia.fonte_geradora} | **Danos:** {item_ia.danos_saude}")
                 st.write(f"**Proposta:** {item_ia.medida_proposta}")
                 
+                # TRECHO MODIFICADO:
                 if st.button("Usar estes dados no formulário abaixo", key=f"btn_ia_{idx_ia}"):
-                    # SEGURANÇA: Captura dinamicamente o fk atualizado neste milissegundo do clique
                     fk_atual = st.session_state.get("fk", 0)
-                    
-                    # Preenche os campos usando a chave robusta 'fk_atual'
+    
+                    st.session_state[f"risco_{fk_atual}"] = item_ia.fator_risco # <--- ADICIONADO AQUI
                     st.session_state[f"fator_{fk_atual}"] = item_ia.fator_risco
                     st.session_state[f"fonte_{fk_atual}"] = item_ia.fonte_geradora
                     st.session_state[f"danos_{fk_atual}"] = item_ia.danos_saude
                     st.session_state[f"mp_{fk_atual}"] = item_ia.medida_proposta
-                    
+    
                     st.rerun()
-    
-    
+
+      
 
     # ------------------ RISCOS JÁ ADICIONADOS (COM EDIÇÃO E EXCLUSÃO) ------------------
     if len(st.session_state["lista_riscos"]) > 0:
@@ -639,10 +639,12 @@ if aba_selecionada == "Cadastro Interativo":
     st.markdown("#### ADICIONAR NOVO RISCO À FUNÇÃO")
     fk = st.session_state.get("fk",0)
 
+    # TRECHO MODIFICADO:
     st.markdown("##### FAIXA 2: Identificação do Risco")
-    df_risco_load = load_tabela("Riscos_Ambientais")
-    op_risco = df_risco_load["Nome Risco"].tolist() if not df_risco_load.empty else []
-    risco_selecionado = st.selectbox("Risco Ambiental(Tipo de Risco)", op_risco, key=f"risco_{fk}")
+    # Buscamos um valor pré-existente (da IA ou edição), se não houver inicia vazio ""
+    valor_padrao_risco = st.session_state.get(f"risco_{fk}", "")
+    risco_selecionado = st.text_input("Risco Ambiental (Tipo de Risco)", value=valor_padrao_risco, key=f"risco_{fk}")
+
     
     c7, c8 = st.columns(2)
     fator_risco = c7.text_input("Fator de Risco", key=f"fator_{fk}")
