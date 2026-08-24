@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import gspread
+from gspread_dataframe import set_with_dataframe
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
@@ -198,7 +199,7 @@ def load_tabela(nome):
 def save_tabela(nome, df):
     sh = gc.open_by_key(DB_SHEET_ID)
     worksheet = sh.worksheet(nome)
-    worksheet.clear()
+    
     
     # 🌟 ADICIONADO APENAS ESTE BLOCO: Se faltar colunas ou dados, avisa o usuário e para aqui
     if df.empty or len(df.columns) == 0:
