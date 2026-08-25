@@ -241,7 +241,8 @@ def save_tabela(nome, df):
     
 
 def proximo_id(df, col_pk):
-    if df.empty: return 1
+    if df.empty: 
+        return 1
     df[col_pk] = pd.to_numeric(df[col_pk], errors='coerce').fillna(0)
     return int(df[col_pk].max()) + 1
 
@@ -374,9 +375,9 @@ def sincronizar_tabelas_entidades(is_initial=False):
                     continue 
                       
             except Exception as e_aba:
-            # Captura o erro completo (inclusive corpo de resposta da API, se houver) por aba específica
-            detalhe = str(e_aba)
-            resp = getattr(e_aba, "response", None)
+                # Captura o erro completo (inclusive corpo de resposta da API, se houver) por aba específica
+                detalhe = str(e_aba)
+                resp = getattr(e_aba, "response", None)
             if resp is not None:
                 try:
                     detalhe += f" | Resposta da API: {resp.text}"
