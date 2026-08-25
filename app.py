@@ -403,7 +403,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
                     save_tabela("Riscos_Ambientais", df_risco) 
                     continue 
                       
-        except Exception as e_aba:
+    except Exception as e_aba:
                 
             # Captura o erro completo (inclusive corpo de resposta da API, se houver) por aba específica
             detalhe = str(e_aba)
