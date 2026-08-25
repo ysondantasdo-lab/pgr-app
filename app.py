@@ -288,119 +288,120 @@ if st.session_state["usuario_perfil"] == "Admin":
 # ------------------------------------------------------------------------------
 def sincronizar_tabelas_entidades(is_initial=False):
     try: 
-        sh_dados = gc.open_by_key(DADOS_SHEET_ID)
-    except Exception as e_sh:
-        return False, f"Falha na linha 'sh_dados': {e_sh}\n\n{traceback.format_exc()}"
-    try:        
-        df_sec = load_tabela("Secretarias")
-    except Exception as e_sec:
-        return False, f"Falha na linha 'df_sec': {e_sec}\n\n{traceback.format_exc()}"
-    try:
-        df_cargo = load_tabela("Cargo")
-    except Exception as e_car:
-        return False, f"Falha na linha 'df_cargo': {e_car}\n\n{traceback.format_exc()}"
-    try:        
-        df_risco = load_tabela("Riscos_Ambientais")
-    except Exception as e_ris:
-        return False, f"Falha na linha 'df_risco': {e_ris}\n\n{traceback.format_exc()}"
+        try:
+            sh_dados = gc.open_by_key(DADOS_SHEET_ID)
+        except Exception as e_sh:
+            return False, f"Falha na linha 'sh_dados': {e_sh}\n\n{traceback.format_exc()}"
+        try:        
+            df_sec = load_tabela("Secretarias")
+        except Exception as e_sec:
+            return False, f"Falha na linha 'df_sec': {e_sec}\n\n{traceback.format_exc()}"
+        try:
+            df_cargo = load_tabela("Cargo")
+        except Exception as e_car:
+            return False, f"Falha na linha 'df_cargo': {e_car}\n\n{traceback.format_exc()}"
+        try:        
+            df_risco = load_tabela("Riscos_Ambientais")
+        except Exception as e_ris:
+            return False, f"Falha na linha 'df_risco': {e_ris}\n\n{traceback.format_exc()}"
         
-    if is_initial and not df_sec.empty and not df_cargo.empty and len(df_cargo) > 0:
-        return True, "Carga inicial já havia sido feita." 
+        if is_initial and not df_sec.empty and not df_cargo.empty and len(df_cargo) > 0:
+            return True, "Carga inicial já havia sido feita." 
         
         # Criamos o dicionário com chaves {} para identificar o nome de cada aba da planilha fonte
         tabelas_lidas = {}
         # 5. Testando a leitura da lista de abas da planilha
-    try:
-        lista_abas = sh_dados.worksheets()
-        for ws in lista_abas:
-            try:
-                dados = ws.get_all_records() 
-                if dados: 
-                    tabelas_lidas[ws.title] = pd.DataFrame(dados) 
-            except Exception:
-                pass # Ignora abas individuais vazias se o resto puder ser lido
+        try:
+            lista_abas = sh_dados.worksheets()
+            for ws in lista_abas:
+                try:
+                    dados = ws.get_all_records() 
+                    if dados: 
+                        tabelas_lidas[ws.title] = pd.DataFrame(dados) 
+                except Exception:
+                    pass # Ignora abas individuais vazias se o resto puder ser lido
         
-    except Exception as e_lista:
+        except Exception as e_lista:
         
-        return False, f"Falha na linha 'for ws in sh_dados.worksheets()': {e_lista}\n\n{traceback.format_exc()}"
+            return False, f"Falha na linha 'for ws in sh_dados.worksheets()': {e_lista}\n\n{traceback.format_exc()}"
             
       
        
-    if not tabelas_lidas: 
-        return False, "Planilha DADOSTABELAS parece estar vazia." 
+        if not tabelas_lidas: 
+            return False, "Planilha DADOSTABELAS parece estar vazia." 
             
-    # Processa cada tabela lida do GSheets do Admin usando os nomes exatos fornecidos
-    erros_por_aba = []
-    for nome_aba, df_excel in tabelas_lidas.items():
-        try:
-            df_excel.replace("", float("NaN"), inplace=True) 
-            df_excel.ffill(inplace=True)
-            st.sidebar.write(f"🔄 Processando aba: {nome_aba}")
+        # Processa cada tabela lida do GSheets do Admin usando os nomes exatos fornecidos
+        erros_por_aba = []
+        for nome_aba, df_excel in tabelas_lidas.items():
+            try:
+                df_excel.replace("", float("NaN"), inplace=True) 
+                df_excel.ffill(inplace=True)
+                st.sidebar.write(f"🔄 Processando aba: {nome_aba}")
             
-            # --- 1. Sincronizar Probabilidade ---
-            if nome_aba == "Probabilidade":
-                df_prob_novo = df_excel[[c for c in ESTRUTURA_TABS["Probabilidade"] if c in df_excel.columns]].copy()
-                save_tabela("Probabilidade", df_prob_novo)
-                continue
+                # --- 1. Sincronizar Probabilidade ---
+                if nome_aba == "Probabilidade":
+                    df_prob_novo = df_excel[[c for c in ESTRUTURA_TABS["Probabilidade"] if c in df_excel.columns]].copy()
+                    save_tabela("Probabilidade", df_prob_novo)
+                    continue
 
-            # --- 2. Sincronizar Efeito (Severidade) ---
-            if nome_aba == "Efeito":
-                df_efeito_novo = df_excel[[c for c in ESTRUTURA_TABS["Efeito"] if c in df_excel.columns]].copy()
-                save_tabela("Efeito", df_efeito_novo)
-                continue
+                # --- 2. Sincronizar Efeito (Severidade) ---
+                if nome_aba == "Efeito":
+                    df_efeito_novo = df_excel[[c for c in ESTRUTURA_TABS["Efeito"] if c in df_excel.columns]].copy()
+                    save_tabela("Efeito", df_efeito_novo)
+                    continue
 
             
-            # --- 3. Sincronizar Tipo de Medida Proposta (Classificação) ---
-            if nome_aba == "Tipo_Medida_Proposta":
-                df_tmp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Medida_Proposta"] if c in df_excel.columns]].copy()
-                save_tabela("Tipo_Medida_Proposta", df_tmp_novo)
-                continue
+                # --- 3. Sincronizar Tipo de Medida Proposta (Classificação) ---
+                if nome_aba == "Tipo_Medida_Proposta":
+                    df_tmp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Medida_Proposta"] if c in df_excel.columns]].copy()
+                    save_tabela("Tipo_Medida_Proposta", df_tmp_novo)
+                    continue
 
-            # --- 4. Sincronizar Tipo de Exposição ---
-            if nome_aba in ("Tipo_Exposicao", "Tipo_Exposição"):
-                df_exp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Exposicao"] if c in df_excel.columns]].copy()
-                save_tabela("Tipo_Exposicao", df_exp_novo)
-                continue
+                # --- 4. Sincronizar Tipo de Exposição ---
+                if nome_aba in ("Tipo_Exposicao", "Tipo_Exposição"):
+                    df_exp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Exposicao"] if c in df_excel.columns]].copy()
+                    save_tabela("Tipo_Exposicao", df_exp_novo)
+                    continue
 
             
            
-            # --- 5. Sincronizar Secretaria --- 
-            if nome_aba == "Secretarias": 
-                orgaos = df_excel["Nome do Órgão"].dropna().unique() 
-                df_sec = df_sec[df_sec["Nome do Órgão"].isin(orgaos)] 
-                for index, row in df_excel.drop_duplicates(subset=["Nome do Órgão"]).iterrows(): 
-                    nome = row["Nome do Órgão"] 
-                    if nome in df_sec["Nome do Órgão"].values: 
-                        idx = df_sec[df_sec["Nome do Órgão"] == nome].index 
-                        df_sec.loc[idx, ["Sigla", "Endereço", "CNPJ", "CNAE", "Descrição CNAE", "Grau de Risco", "Grupo de Risco"]] = [
-                            row.get("Sigla", ""), row.get("Endereço", ""), row.get("CNPJ", ""), row.get("CNAE", ""), row.get("Descrição CNAE", ""), row.get("Grau de Risco", ""), row.get("Grupo de Risco", "")
-                        ] 
-                    else: 
-                        df_sec.loc[len(df_sec)] = [proximo_id(df_sec, "Id_Secretaria"), nome, row.get("Sigla", ""), row.get("Endereço", ""), row.get("CNPJ", ""), row.get("CNAE", ""), row.get("Descrição CNAE", ""), row.get("Grau de Risco", ""), row.get("Grupo de Risco", "")] 
-                save_tabela("Secretaria", df_sec) 
-                continue 
-            
-            # --- 6. Sincronizar Cargo --- 
-            if nome_aba == "Cargo": 
-                col_cargo = "Nome do Cargo" if "Nome do Cargo" in df_excel.columns else ("Cargo" if "Cargo" in df_excel.columns else None) 
-                if col_cargo: 
-                    cargos = df_excel[col_cargo].dropna().unique() 
-                    df_cargo = df_cargo[df_cargo["Nome do Cargo"].isin(cargos)] 
-                    for cargo in cargos: 
-                        if cargo not in df_cargo["Nome do Cargo"].values: 
-                            df_cargo.loc[len(df_cargo)] = [proximo_id(df_cargo, "Id_Cargo"), cargo] 
-                    save_tabela("Cargo", df_cargo) 
+                # --- 5. Sincronizar Secretaria --- 
+                if nome_aba == "Secretarias": 
+                    orgaos = df_excel["Nome do Órgão"].dropna().unique() 
+                    df_sec = df_sec[df_sec["Nome do Órgão"].isin(orgaos)] 
+                    for index, row in df_excel.drop_duplicates(subset=["Nome do Órgão"]).iterrows(): 
+                        nome = row["Nome do Órgão"] 
+                        if nome in df_sec["Nome do Órgão"].values: 
+                            idx = df_sec[df_sec["Nome do Órgão"] == nome].index 
+                            df_sec.loc[idx, ["Sigla", "Endereço", "CNPJ", "CNAE", "Descrição CNAE", "Grau de Risco", "Grupo de Risco"]] = [
+                                row.get("Sigla", ""), row.get("Endereço", ""), row.get("CNPJ", ""), row.get("CNAE", ""), row.get("Descrição CNAE", ""), row.get("Grau de Risco", ""), row.get("Grupo de Risco", "")
+                            ] 
+                        else: 
+                            df_sec.loc[len(df_sec)] = [proximo_id(df_sec, "Id_Secretaria"), nome, row.get("Sigla", ""), row.get("Endereço", ""), row.get("CNPJ", ""), row.get("CNAE", ""), row.get("Descrição CNAE", ""), row.get("Grau de Risco", ""), row.get("Grupo de Risco", "")] 
+                    save_tabela("Secretaria", df_sec) 
                     continue 
             
-            # --- 7. Sincronizar Riscos Ambientais --- 
-            if nome_aba == "Riscos_Ambientais": 
-                riscos = df_excel["Nome Risco"].dropna().unique() 
-                df_risco = df_risco[df_risco["Nome Risco"].isin(riscos)] 
-                for risco in riscos: 
-                    if risco not in df_risco["Nome Risco"].values: 
-                        df_risco.loc[len(df_risco)] = [proximo_id(df_risco, "Id_Risco"), risco] 
-                save_tabela("Riscos_Ambientais", df_risco) 
-                continue 
+                # --- 6. Sincronizar Cargo --- 
+                if nome_aba == "Cargo": 
+                    col_cargo = "Nome do Cargo" if "Nome do Cargo" in df_excel.columns else ("Cargo" if "Cargo" in df_excel.columns else None) 
+                    if col_cargo: 
+                        cargos = df_excel[col_cargo].dropna().unique() 
+                        df_cargo = df_cargo[df_cargo["Nome do Cargo"].isin(cargos)] 
+                        for cargo in cargos: 
+                            if cargo not in df_cargo["Nome do Cargo"].values: 
+                                df_cargo.loc[len(df_cargo)] = [proximo_id(df_cargo, "Id_Cargo"), cargo] 
+                        save_tabela("Cargo", df_cargo) 
+                        continue 
+            
+                # --- 7. Sincronizar Riscos Ambientais --- 
+                if nome_aba == "Riscos_Ambientais": 
+                    riscos = df_excel["Nome Risco"].dropna().unique() 
+                    df_risco = df_risco[df_risco["Nome Risco"].isin(riscos)] 
+                    for risco in riscos: 
+                        if risco not in df_risco["Nome Risco"].values: 
+                            df_risco.loc[len(df_risco)] = [proximo_id(df_risco, "Id_Risco"), risco] 
+                    save_tabela("Riscos_Ambientais", df_risco) 
+                    continue 
                       
         except Exception as e_aba:
                 
@@ -419,9 +420,9 @@ def sincronizar_tabelas_entidades(is_initial=False):
         return False, "Falhas em uma ou mais abas: " + " || ".join(erros_por_aba)
 
     return True, "Sincronização de todas as entidades concluída com sucesso."
-    except Exception as e:
-        erro_detalhado = traceback.format_exc()
-        return False, f"Erro ao processar DADOSTABELAS Cloud: {str(e)}"
+except Exception as e:
+    erro_detalhado = traceback.format_exc()
+    return False, f"Erro ao processar DADOSTABELAS Cloud: {str(e)}"
 
 if st.session_state["usuario_perfil"] == "Admin":
     df_validador = load_tabela("Secretaria")
