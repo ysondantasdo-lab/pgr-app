@@ -300,9 +300,9 @@ def sincronizar_tabelas_entidades(is_initial=False):
     except Exception as e_car:
         return False, f"Falha na linha 'df_cargo': {e_car}\n\n{traceback.format_exc()}"
     try:        
-    df_risco = load_tabela("Riscos_Ambientais")
-        except Exception as e_ris:
-            return False, f"Falha na linha 'df_risco': {e_ris}\n\n{traceback.format_exc()}"
+        df_risco = load_tabela("Riscos_Ambientais")
+    except Exception as e_ris:
+        return False, f"Falha na linha 'df_risco': {e_ris}\n\n{traceback.format_exc()}"
         
     if is_initial and not df_sec.empty and not df_cargo.empty and len(df_cargo) > 0:
         return True, "Carga inicial já havia sido feita." 
