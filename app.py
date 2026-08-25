@@ -360,7 +360,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
                         if cargo not in df_cargo["Nome do Cargo"].values: 
                             df_cargo.loc[len(df_cargo)] = [proximo_id(df_cargo, "Id_Cargo"), cargo] 
                     save_tabela("Cargo", df_cargo) 
-                continue 
+                    continue 
             
             # --- 7. Sincronizar Riscos Ambientais --- 
             if nome_aba == "Riscos_Ambientais": 
