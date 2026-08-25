@@ -454,11 +454,19 @@ st.markdown("---")
 if st.session_state["usuario_perfil"] == "Admin":
     st.sidebar.markdown("---")
     if st.sidebar.button("🔄 Sincronizar Tabelas (Puxar da Planilha Fonte)"):
-        suc, msg = sincronizar_tabelas_entidades(is_initial=False)
-        if suc:
-             st.sidebar.success("tabela foi carregada com sucesso")
-        else:
-             st.sidebar.error(msg)
+        try:
+            suc, msg = sincronizar_tabelas_entidades(is_initial=False)
+            if suc:
+                 st.sidebar.success("tabela foi carregada com sucesso")
+            else:
+                 st.sidebar.error(msg)
+        except Exception as e_botao:
+            import traceback
+            # Se der qualquer erro 400 lá dentro, o botão captura o caminho exato e mostra aqui
+            erro_completo = traceback.format_exc()
+            st.sidebar.error(f"❌ Falha técnica detectada!")
+            with st.sidebar.expander("Ver detalhes do erro"):
+                st.code(erro_completo, language="python")
 
 # ==============================================================================
 # ABA 1: CADASTRO INTERATIVO
