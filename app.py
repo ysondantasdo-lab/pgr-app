@@ -312,17 +312,20 @@ def sincronizar_tabelas_entidades(is_initial=False):
         # 5. Testando a leitura da lista de abas da planilha
     try:
         lista_abas = sh_dados.worksheets()
+        for ws in lista_abas:
+            try:
+                dados = ws.get_all_records() 
+                if dados: 
+                    tabelas_lidas[ws.title] = pd.DataFrame(dados) 
+            except Exception:
+                pass # Ignora abas individuais vazias se o resto puder ser lido
+        
     except Exception as e_lista:
-        import traceback
+        
         return False, f"Falha na linha 'for ws in sh_dados.worksheets()': {e_lista}\n\n{traceback.format_exc()}"
             
-        
-    for ws in sh_dados.worksheets():
-        try:
-            dados = ws.get_all_records() 
-            if dados: 
-                tabelas_lidas[ws.title] = pd.DataFrame(dados) 
-        
+      
+       
     if not tabelas_lidas: 
         return False, "Planilha DADOSTABELAS parece estar vazia." 
             
