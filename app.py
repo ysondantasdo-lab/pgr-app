@@ -196,6 +196,10 @@ def load_tabela(nome):
 
 # TRECHO MODIFICADO E CORRIGIDO DE FORMA DEFINITIVA (MÍNIMA ALTERAÇÃO):
 def save_tabela(nome, df):
+    if df.empty or len(df.columns) == 0:
+        st.sidebar.warning(f"⚠️ Aba '{nome}' ignorada: Verifique se os nomes das colunas na planilha fonte estão corretos.")
+        return  # Para aqui, antes de qualquer chamada à API
+        
     sh = gc.open_by_key(DB_SHEET_ID)
     worksheet = sh.worksheet(nome)
     
@@ -204,10 +208,13 @@ def save_tabela(nome, df):
     df_limpo = df.fillna("").astype(str)
     
     # Une o cabeçalho com as linhas de dados em uma lista nativa limpa
-    corpo_planilha = [df_limpo.columns.tolist()] + df_limpo.values.tolist()
+    cabecalho = df_limpo.columns.tolist()
+    linhas_dados = df_limpo.values.tolist()
+    matriz_final = [cabecalho] + linhas_dados
+    
     
     # CORREÇÃO DEFINITIVA: Passa a coordenada inicial 'A1' exigida pelo gspread moderno
-    worksheet.update(values=corpo_planilha, range_name='A1')
+    worksheet.update(range_name='A1', values=matriz_final)
     st.cache_data.clear()
 
     
@@ -294,6 +301,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
             return False, "Planilha DADOSTABELAS parece estar vazia." 
             
         # Processa cada tabela lida do GSheets do Admin usando os nomes exatos fornecidos
+        erros_por_aba = []
         for nome_aba, df_excel in tabelas_lidas.items(): 
             df_excel.replace("", float("NaN"), inplace=True) 
             df_excel.ffill(inplace=True)
@@ -311,23 +319,21 @@ def sincronizar_tabelas_entidades(is_initial=False):
                 save_tabela("Efeito", df_efeito_novo)
                 continue
 
-            # RETORNO AO CÓDIGO ORIGINAL SEGURO (MÍNIMA ALTERAÇÃO):
+            
             # --- 3. Sincronizar Tipo de Medida Proposta (Classificação) ---
-            if nome_aba == "Tipo_Medida_Proposta" in df_excel.columns:
+            if nome_aba == "Tipo_Medida_Proposta":
                 df_tmp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Medida_Proposta"] if c in df_excel.columns]].copy()
                 save_tabela("Tipo_Medida_Proposta", df_tmp_novo)
-                st.cache_data.clear() # Mantém apenas a limpeza de memória da tela
                 continue
 
             # --- 4. Sincronizar Tipo de Exposição ---
-            if nome_aba == "Tipo_Exposicao" in df_excel.columns:
+            if nome_aba in ("Tipo_Exposicao", "Tipo_Exposição"):
                 df_exp_novo = df_excel[[c for c in ESTRUTURA_TABS["Tipo_Exposicao"] if c in df_excel.columns]].copy()
                 save_tabela("Tipo_Exposicao", df_exp_novo)
-                st.cache_data.clear() # Mantém apenas a limpeza de memória da tela
                 continue
 
             
-            # TRECHO MODIFICADO PARA PADRONIZAÇÃO POR NOME DE ABA (MÍNIMA ALTERAÇÃO):
+           
             # --- 5. Sincronizar Secretaria --- 
             if nome_aba == "Secretarias": 
                 orgaos = df_excel["Nome do Órgão"].dropna().unique() 
@@ -342,7 +348,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
                     else: 
                         df_sec.loc[len(df_sec)] = [proximo_id(df_sec, "Id_Secretaria"), nome, row.get("Sigla", ""), row.get("Endereço", ""), row.get("CNPJ", ""), row.get("CNAE", ""), row.get("Descrição CNAE", ""), row.get("Grau de Risco", ""), row.get("Grupo de Risco", "")] 
                 save_tabela("Secretaria", df_sec) 
-                continue # Padronizado com os blocos anteriores
+                continue 
             
             # --- 6. Sincronizar Cargo --- 
             if nome_aba == "Cargo": 
@@ -354,7 +360,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
                         if cargo not in df_cargo["Nome do Cargo"].values: 
                             df_cargo.loc[len(df_cargo)] = [proximo_id(df_cargo, "Id_Cargo"), cargo] 
                     save_tabela("Cargo", df_cargo) 
-                continue # Padronizado com os blocos anteriores
+                continue 
             
             # --- 7. Sincronizar Riscos Ambientais --- 
             if nome_aba == "Riscos_Ambientais": 
@@ -364,14 +370,24 @@ def sincronizar_tabelas_entidades(is_initial=False):
                     if risco not in df_risco["Nome Risco"].values: 
                         df_risco.loc[len(df_risco)] = [proximo_id(df_risco, "Id_Risco"), risco] 
                 save_tabela("Riscos_Ambientais", df_risco) 
-                continue # Padronizado com os blocos anteriores
-             
+                continue 
+                      
+    except Exception as e_aba:
+        # Captura o erro completo (inclusive corpo de resposta da API, se houver) por aba específica
+        detalhe = str(e_aba)
+        resp = getattr(e_aba, "response", None)
+        if resp is not None:
+            try:
+                detalhe += f" | Resposta da API: {resp.text}"
+            except Exception:
+                pass
+        erros_por_aba.append(f"{nome_aba}: {detalhe}")
+        st.sidebar.error(f"❌ Falha ao processar aba '{nome_aba}': {detalhe}")
 
- 
-                
-        return True, "Sincronização de todas as entidades concluída com sucesso." 
-    except Exception as e:
-        return False, f"Erro ao processar DADOSTABELAS Cloud: {str(e)}"
+if erros_por_aba:
+    return False, "Falhas em uma ou mais abas: " + " || ".join(erros_por_aba)
+
+return True, "Sincronização de todas as entidades concluída com sucesso."
 
 if st.session_state["usuario_perfil"] == "Admin":
     df_validador = load_tabela("Secretaria")
