@@ -96,7 +96,7 @@ def load_tabela(nome):
             if not linhas or len(linhas) <=1:
                 return pd.DataFrame(colums=ESTRUTURA_TABS[nome])
                 
-            data = worksheet.get_all_records() (retirado - tentativa de consertar erro)
+            #data = worksheet.get_all_records() (retirado - tentativa de consertar erro)
             #if not data:
             #    return pd.DataFrame(columns=ESTRUTURA_TABS[nome])
             return pd.DataFrame(data)
