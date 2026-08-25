@@ -171,7 +171,7 @@ if "fk" not in st.session_state:
 # 2. MODELAGEM DO BANCO DE DADOS (Helpers via Google Sheets API)
 # ------------------------------------------------------------------------------
 ESTRUTURA_TABS = {
-    "Secretaria": ["Id_Secretaria", "Nome do Órgão", "Sigla", "Endereço", "CNPJ", "CNAE", "Descrição CNAE", "Grau de Risco", "Grupo de Risco"],
+    "Secretarias": ["Id_Secretaria", "Nome do Órgão", "Sigla", "Endereço", "CNPJ", "CNAE", "Descrição CNAE", "Grau de Risco", "Grupo de Risco"],
     "Cargo": ["Id_Cargo", "Nome do Cargo"],
     "Riscos_Ambientais": ["Id_Risco", "Nome Risco"],
     "Tipo_Exposicao": ["Id_Exposição", "Nome Exposição"],
@@ -378,7 +378,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
                             ] 
                         else: 
                             df_sec.loc[len(df_sec)] = [proximo_id(df_sec, "Id_Secretaria"), nome, row.get("Sigla", ""), row.get("Endereço", ""), row.get("CNPJ", ""), row.get("CNAE", ""), row.get("Descrição CNAE", ""), row.get("Grau de Risco", ""), row.get("Grupo de Risco", "")] 
-                    save_tabela("Secretaria", df_sec) 
+                    save_tabela("Secretarias", df_sec) 
                     continue 
             
                 # --- 6. Sincronizar Cargo --- 
