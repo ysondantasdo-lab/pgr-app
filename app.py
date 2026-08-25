@@ -288,21 +288,39 @@ if st.session_state["usuario_perfil"] == "Admin":
 # ------------------------------------------------------------------------------
 def sincronizar_tabelas_entidades(is_initial=False):
     try: 
-        sh_dados = gc.open_by_key(DADOS_SHEET_ID) 
+        sh_dados = gc.open_by_key(DADOS_SHEET_ID)
+    except Exception as e_sh:
+        return False, f"Falha na linha 'sh_dados': {e_sh}\n\n{traceback.format_exc()}"
         
-        df_sec = load_tabela("Secretarias") 
-        df_cargo = load_tabela("Cargo") 
-        df_risco = load_tabela("Riscos_Ambientais") 
+        df_sec = load_tabela("Secretarias")
+            except Exception as e_sec:
+                return False, f"Falha na linha 'df_sec': {e_sec}\n\n{traceback.format_exc()}"
+        df_cargo = load_tabela("Cargo")
+            except Exception as e_car:
+                return False, f"Falha na linha 'df_cargo': {e_car}\n\n{traceback.format_exc()}"
+            
+        df_risco = load_tabela("Riscos_Ambientais")
+            except Exception as e_ris:
+                return False, f"Falha na linha 'df_risco': {e_ris}\n\n{traceback.format_exc()}"
         
         if is_initial and not df_sec.empty and not df_cargo.empty and len(df_cargo) > 0:
             return True, "Carga inicial já havia sido feita." 
         
         # Criamos o dicionário com chaves {} para identificar o nome de cada aba da planilha fonte
-        tabelas_lidas = {} 
-        for ws in sh_dados.worksheets(): 
-            dados = ws.get_all_records() 
-            if dados: 
-                tabelas_lidas[ws.title] = pd.DataFrame(dados) 
+        tabelas_lidas = {}
+        # 5. Testando a leitura da lista de abas da planilha
+        try:
+            lista_abas = sh_dados.worksheets()
+        except Exception as e_lista:
+            import traceback
+            return False, f"Falha na linha 'for ws in sh_dados.worksheets()': {e_lista}\n\n{traceback.format_exc()}"
+            
+        
+        for ws in sh_dados.worksheets():
+            try:
+                dados = ws.get_all_records() 
+                if dados: 
+                    tabelas_lidas[ws.title] = pd.DataFrame(dados) 
         
         if not tabelas_lidas: 
             return False, "Planilha DADOSTABELAS parece estar vazia." 
@@ -381,6 +399,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
                     continue 
                       
             except Exception as e_aba:
+                
                 # Captura o erro completo (inclusive corpo de resposta da API, se houver) por aba específica
                 detalhe = str(e_aba)
                 resp = getattr(e_aba, "response", None)
