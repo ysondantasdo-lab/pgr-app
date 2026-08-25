@@ -92,9 +92,13 @@ def load_tabela(nome):
         try:
             sh = gc.open_by_key(DB_SHEET_ID)
             worksheet = sh.worksheet(nome)
-            data = worksheet.get_all_records()
-            if not data:
-                return pd.DataFrame(columns=ESTRUTURA_TABS[nome])
+            linhas = worksheet.get_all_values()
+            if not linhas or len(linhas) <=1:
+                return pd.DataFrame(colums=ESTRUTURA_TABS[nome])
+                
+            data = worksheet.get_all_records() (retirado - tentativa de consertar erro)
+            #if not data:
+            #    return pd.DataFrame(columns=ESTRUTURA_TABS[nome])
             return pd.DataFrame(data)
             
         except gspread.exceptions.WorksheetNotFound:
@@ -119,13 +123,15 @@ def load_tabela(nome):
             
             # Aguarda o tempo estipulado e limpa a sessão do gspread para forçar uma nova rota de rede
             time.sleep(tempo_espera)
-            try:
-                gc.login() # Tenta reautenticar silenciosamente a sessão ativa
-            except:
-                pass
-                
-            # Limpa o aviso flutuante da tela antes da próxima tentativa para o layout ficar limpo
+            # Limpa o aviso flutuante da tela antes da póxima tentativa
             aviso_placeholder.empty()
+        
+            #try:
+            #    gc.login() # Tenta reautenticar silenciosamente a sessão ativa
+            #except:
+            #    pass
+                
+
 # FIM DA PROTEÇÃO CONTRA INSTABILIDADE DO GOOGLESHEETS
 
 if "usuario_perfil" not in st.session_state:
