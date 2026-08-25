@@ -425,7 +425,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
         return False, f"Erro ao processar DADOSTABELAS Cloud: {str(e)}"
 
 if st.session_state["usuario_perfil"] == "Admin":
-    df_validador = load_tabela("Secretaria")
+    df_validador = load_tabela("Secretarias")
     if df_validador.empty:
         sincronizar_tabelas_entidades(is_initial=True)
 
@@ -543,7 +543,7 @@ if aba_selecionada == "Cadastro Interativo":
         padrao_desc_atv = ""
 
 
-    df_sec_load = load_tabela("Secretaria") 
+    df_sec_load = load_tabela("Secretarias") 
     df_cargo_load = load_tabela("Cargo") 
     op_sec = df_sec_load["Nome do Órgão"].tolist() if not df_sec_load.empty else [] 
     op_cargo = df_cargo_load["Nome do Cargo"].tolist() if not df_cargo_load.empty else [] 
@@ -552,7 +552,7 @@ if aba_selecionada == "Cadastro Interativo":
     if id_alvo_db is not None:
         df_cf_atual = load_tabela("Cargo_Funcao")
         df_sl_atual = load_tabela("Secretaria_Lotacao")
-        df_sec_atual = load_tabela("Secretaria")
+        df_sec_atual = load_tabela("Secretarias")
         df_cargo_atual = load_tabela("Cargo")
 
         linha_cf = df_cf_atual[df_cf_atual["Id_Cargo_Func"] == id_alvo_db]
@@ -1026,7 +1026,7 @@ if aba_selecionada == "Cadastro Interativo":
 # ==============================================================================
 @st.cache_data(ttl=60)  # Guarda os cruzamentos prontos por 60 segundos na memória RAM
 def gerar_view_consolidada():
-    df1 = load_tabela("Secretaria").rename(columns={"Id_Secretaria": "id_sec"})
+    df1 = load_tabela("Secretarias").rename(columns={"Id_Secretaria": "id_sec"})
     df2 = load_tabela("Secretaria_Lotacao").rename(columns={"Id_Sec_Lotação": "id_sl", "Id_Secretaria": "id_sec"})
     df3 = load_tabela("Cargo_Funcao").rename(columns={"Id_Cargo_Func": "id_cf", "Id_Sec_Lotação": "id_sl", "Id_Cargo": "id_c"})
     df4 = load_tabela("Cargo").rename(columns={"Id_Cargo": "id_c"})
@@ -1313,7 +1313,7 @@ if aba_selecionada == "Relatório Completo":
     
     st.markdown("---")
     try:
-        df_sec = load_tabela("Secretaria")
+        df_sec = load_tabela("Secretarias")
         all_secretarias = df_sec["Nome do Órgão"].tolist() if not df_sec.empty else []
     except:
         all_secretarias = []
