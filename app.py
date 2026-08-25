@@ -389,8 +389,8 @@ def sincronizar_tabelas_entidades(is_initial=False):
             return False, "Falhas em uma ou mais abas: " + " || ".join(erros_por_aba)
 
         return True, "Sincronização de todas as entidades concluída com sucesso."
-except Exception as e:
-    return False, f"Erro ao processar DADOSTABELAS Cloud: {str(e)}
+    except Exception as e:
+        return False, f"Erro ao processar DADOSTABELAS Cloud: {str(e)}
 
 if st.session_state["usuario_perfil"] == "Admin":
     df_validador = load_tabela("Secretaria")
