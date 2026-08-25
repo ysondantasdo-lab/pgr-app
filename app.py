@@ -297,8 +297,8 @@ def sincronizar_tabelas_entidades(is_initial=False):
         return False, f"Falha na linha 'df_sec': {e_sec}\n\n{traceback.format_exc()}"
     try:
         df_cargo = load_tabela("Cargo")
-        except Exception as e_car:
-            return False, f"Falha na linha 'df_cargo': {e_car}\n\n{traceback.format_exc()}"
+    except Exception as e_car:
+        return False, f"Falha na linha 'df_cargo': {e_car}\n\n{traceback.format_exc()}"
     try:        
     df_risco = load_tabela("Riscos_Ambientais")
         except Exception as e_ris:
