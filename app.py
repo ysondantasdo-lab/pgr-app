@@ -403,26 +403,26 @@ def sincronizar_tabelas_entidades(is_initial=False):
                     save_tabela("Riscos_Ambientais", df_risco) 
                     continue 
                       
-    except Exception as e_aba:
+            except Exception as e_aba:
                 
-            # Captura o erro completo (inclusive corpo de resposta da API, se houver) por aba específica
-            detalhe = str(e_aba)
-            resp = getattr(e_aba, "response", None)
-            if resp is not None:
-                try:
-                    detalhe += f" | Resposta da API: {resp.text}"
-                except Exception:
-                    pass
-            erros_por_aba.append(f"{nome_aba}: {detalhe}")
-            st.sidebar.error(f"❌ Falha ao processar aba '{nome_aba}': {detalhe}")
+                # Captura o erro completo (inclusive corpo de resposta da API, se houver) por aba específica
+                detalhe = str(e_aba)
+                resp = getattr(e_aba, "response", None)
+                if resp is not None:
+                    try:
+                        detalhe += f" | Resposta da API: {resp.text}"
+                    except Exception:
+                        pass
+                erros_por_aba.append(f"{nome_aba}: {detalhe}")
+                st.sidebar.error(f"❌ Falha ao processar aba '{nome_aba}': {detalhe}")
 
         if erros_por_aba:
             return False, "Falhas em uma ou mais abas: " + " || ".join(erros_por_aba)
 
         return True, "Sincronização de todas as entidades concluída com sucesso."
-except Exception as e:
-    erro_detalhado = traceback.format_exc()
-    return False, f"Erro ao processar DADOSTABELAS Cloud: {str(e)}"
+    except Exception as e:
+        erro_detalhado = traceback.format_exc()
+        return False, f"Erro ao processar DADOSTABELAS Cloud: {str(e)}"
 
 if st.session_state["usuario_perfil"] == "Admin":
     df_validador = load_tabela("Secretaria")
