@@ -284,7 +284,7 @@ def sincronizar_tabelas_entidades(is_initial=False):
     try: 
         sh_dados = gc.open_by_key(DADOS_SHEET_ID) 
         
-        df_sec = load_tabela("Secretaria") 
+        df_sec = load_tabela("Secretarias") 
         df_cargo = load_tabela("Cargo") 
         df_risco = load_tabela("Riscos_Ambientais") 
         
