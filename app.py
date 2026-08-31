@@ -962,12 +962,13 @@ if aba_selecionada == "Cadastro Interativo":
 
 
                 # --- FASE 2: VALIDAÇÃO TOTAL EM MEMÓRIA (nenhum lookup falho grava nada) ---
-               
+                              
                 # Criamos mapas na memória RAM antes de entrar no laço. A busca fica instantânea!
-                mapa_riscos = dict(zip(df_risco["Nome Risco"], df_risco["Id_Risco"]))
-                mapa_expo = dict(zip(df_exp["Nome Exposição"], df_exp["Id_Exposição"]))
-                mapa_prob = dict(zip(df_prob["Peso Probabilidade"], df_prob["Id_Probabilidade"]))
-                mapa_efeito = dict(zip(df_efeito["Peso Efeito"], df_efeito["Id_Efeito"]))
+                mapa_riscos = dict(zip(load_tabela("Riscos_Ambientais")["Nome Risco"], load_tabela("Riscos_Ambientais")["Id_Risco"]))
+                mapa_expo = dict(zip(load_tabela("Tipo_Exposicao")["Nome Exposição"], load_tabela("Tipo_Exposicao")["Id_Exposição"]))
+                mapa_prob = dict(zip(load_tabela("Probabilidade")["Peso Probabilidade"], load_tabela("Probabilidade")["Id_Probabilidade"]))
+                mapa_efeito = dict(zip(load_tabela("Efeito")["Peso Efeito"], load_tabela("Efeito")["Id_Efeito"]))
+
 
                 linhas_lr, linhas_me, linhas_mp = [], [], []
                 for ri in st.session_state["lista_riscos"]:
