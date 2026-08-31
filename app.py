@@ -1504,7 +1504,7 @@ if aba_selecionada == "Relatório Completo":
                     conteudo_docx = request.execute()
 
                     # 📍 ADICIONE ESTA LINHA EXATAMENTE AQUI:
-                    mapear_tags_tabela(io.BytesIO(conteudo_docx) 
+                    mapear_tags_tabela(io.BytesIO(conteudo_docx)) 
 
                     # === Configurações de cabeçalho para evitar cache ===
                     request.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
