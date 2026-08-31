@@ -1064,6 +1064,10 @@ def gerar_view_consolidada():
     df_lr = load_tabela("Lotacao_Risco").rename(columns={"Id_Lotação_Risco": "id_lr", "Id_Cargo_Func": "id_cf", "Id_Risco": "id_risco"})
     df_risco = load_tabela("Riscos_Ambientais").rename(columns={"Id_Risco": "id_risco"})
 
+    # Padronização forçada dos tipos para evitar erro de cruzamento str/int64
+    df_lr["id_risco"] = df_lr["id_risco"].astype(str)
+    df_risco["id_risco"] = df_risco["id_risco"].astype(str)
+
     # 🌟 CORREÇÃO: Carrega a tabela de Medidas Propostas que estava faltando aqui dentro
     df_mp = load_tabela("Risco_Medida_Proposta")
 
