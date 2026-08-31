@@ -24,6 +24,7 @@ import re
 import shutil
 import time 
 from docxtpl import DocxTemplate
+import docx
 
 # FUNÇÃO PARA VERIFICAR ONDE ESTÁ ERRO DE PLACEHOLDER NO TEMPLATE
 def mapear_tags_tabela(arquivo_bytes):
