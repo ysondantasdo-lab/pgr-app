@@ -999,8 +999,9 @@ if aba_selecionada == "Cadastro Interativo":
 
                 # --- FASE 3: GRAVAÇÃO NA NUVEM, COM ROLLBACK PELO SNAPSHOT ORIGINAL ---
 
-                tabelas_gravadas = []
+                
                 try:
+                    tabelas_gravadas = []
                     df_sl.loc[len(df_sl)] = [id_sl, id_sec, lotacao, desc_fisica]
                     save_tabela("Secretaria_Lotacao", df_sl)
                     tabelas_gravadas.append(("Secretaria_Lotacao", df_sl_original))
@@ -1041,7 +1042,7 @@ if aba_selecionada == "Cadastro Interativo":
                             save_tabela(nome_tabela, df_estado_anterior)
                         except Exception:
                             pass
-                    st.error(f"Erro geral no processamento ou salvamento: {ex}\n\n{traceback.format_exc()}")
+                st.error(f"Erro geral no processamento ou salvamento: {ex}\n\n{traceback.format_exc()}")
 
             except Exception as ex:
                 st.error(f"Erro ao preparar ou processar dados: {ex}")
