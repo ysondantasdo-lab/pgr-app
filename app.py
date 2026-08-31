@@ -959,8 +959,7 @@ if aba_selecionada == "Cadastro Interativo":
                 df_me_original = df_me.copy()
                 df_mp = load_tabela("Risco_Medida_Proposta")
                 df_mp_original = df_mp.copy()
-            except Exception as ex:
-                st.error(f"Erro ao preparar dados: {ex}")
+
 
                 # --- FASE 2: VALIDAÇÃO TOTAL EM MEMÓRIA (nenhum lookup falho grava nada) ---
                
@@ -1045,10 +1044,8 @@ if aba_selecionada == "Cadastro Interativo":
                             save_tabela(nome_tabela, df_estado_anterior)
                         except Exception:
                             pass
-                    st.error(f"Falha ao salvar — alterações revertidas para manter consistência. Detalhe: {erro_gravacao}")
+                    st.error(f"Erro geral no processamento ou salvamento: {ex}\n\n{traceback.format_exc()}")
 
-            except Exception as ex:
-                st.error(f"Erro ao preparar dados: {ex}")
 
 
 # ==============================================================================
