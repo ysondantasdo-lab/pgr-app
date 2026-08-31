@@ -1030,13 +1030,10 @@ if aba_selecionada == "Cadastro Interativo":
                     st.session_state["lista_riscos"] = []
                     st.session_state["cadastro_salvo_sucesso"] = True  # Mantém o gatilho ativo para segurança
                     
-                    # Aguarda 3 segundos para que o usuário consiga ler a mensagem fixa de sucesso antes de limpar a tela
-                    import time
-                    time.sleep(3)
                     
                     st.rerun()
 
-
+            
 
                 except Exception as erro_gravacao:
                     for nome_tabela, df_estado_anterior in reversed(tabelas_gravadas):
@@ -1045,8 +1042,9 @@ if aba_selecionada == "Cadastro Interativo":
                         except Exception:
                             pass
                     st.error(f"Erro geral no processamento ou salvamento: {ex}\n\n{traceback.format_exc()}")
-                except Exception as ex:
-                    st.error(f"Erro ao preparar ou processar dados: {ex}")
+
+            except Exception as ex:
+                st.error(f"Erro ao preparar ou processar dados: {ex}")
 
 
 
