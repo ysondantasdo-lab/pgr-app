@@ -1045,6 +1045,8 @@ if aba_selecionada == "Cadastro Interativo":
                         except Exception:
                             pass
                     st.error(f"Erro geral no processamento ou salvamento: {ex}\n\n{traceback.format_exc()}")
+                except Exception as ex:
+                    st.error(f"Erro ao preparar ou processar dados: {ex}")
 
 
 
