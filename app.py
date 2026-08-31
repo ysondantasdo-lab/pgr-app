@@ -25,6 +25,38 @@ import shutil
 import time 
 from docxtpl import DocxTemplate
 
+# FUNÇÃO PARA VERIFICAR ONDE ESTÁ ERRO DE PLACEHOLDER NO TEMPLATE
+def mapear_tags_tabela(arquivo_bytes):
+    # Garante que a leitura comece do início do arquivo na memória
+    arquivo_bytes.seek(0)
+    doc = docx.Document(arquivo_bytes)
+    
+    encontrou_problema = False
+
+    # Varre todas as tabelas em busca das tags
+    for idx_tabela, tabela in enumerate(doc.tables, start=1):
+        for idx_linha, linha in enumerate(tabela.rows, start=1):
+            for idx_coluna, celula in enumerate(linha.cells, start=1):
+                texto = celula.text
+                
+                # Se encontrar a tag, avisa direto na tela do Streamlit
+                if "tr_for" in texto or "tr_endfor" in texto:
+                    encontrou_problema = True
+                    st.error(
+                        f"📍 **Ocorrência encontrada na Tabela #{idx_tabela}:**\n"
+                        f"• Linha: {idx_linha}, Coluna: {idx_coluna}\n"
+                        f"• Texto bruto lido: `{repr(texto)}`"
+                    )
+    
+    # Esta verificação agora fica FORA dos loops, checando o resultado final
+    if encontrou_problema:
+        st.warning("⚠️ **Aviso:** Corrija os placeholders apontados nos blocos vermelhos acima diretamente no seu arquivo do Word.")
+    else:
+        st.success("✅ Tudo certo! Nenhuma tag de 'tr_for' ou 'tr_endfor' apresentou erro nas tabelas.")
+    
+    # Reseta o ponteiro dos bytes para que o resto do seu script leia o documento normalmente
+    arquivo_bytes.seek(0)
+
 
 
 # Estrutura para a Inteligência Artificial do Gemini entregar os dados organizados
@@ -1469,6 +1501,10 @@ if aba_selecionada == "Relatório Completo":
 
                     # Baixar DOCX pelo ID da API
                     request = drive_service.files().get_media(fileId=DOCX_TEMPLATE_ID)
+                    conteudo_docx = request.execute()
+
+                    # 📍 ADICIONE ESTA LINHA EXATAMENTE AQUI:
+                    mapear_tags_tabela(io.BytesIO(conteudo_docx) 
 
                     # === Configurações de cabeçalho para evitar cache ===
                     request.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
