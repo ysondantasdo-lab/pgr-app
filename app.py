@@ -289,7 +289,16 @@ if st.session_state["usuario_perfil"] == "Admin":
 def sincronizar_tabelas_entidades(is_initial=False):
     try: 
         try:
-            sh_dados = gc.open_by_key(DADOS_SHEET_ID)
+            import time
+            for tentativa in range(3):
+                try:
+                    sh_dados = gc.open_by_key(DADOS_SHEET_ID)
+                    break
+                except gspread.exceptions.APIError as e:
+                    if e.response.status_code == 503 and tentativa < 2:
+                        time.sleep(2)
+                        continue
+                    raise e
         except Exception as e_sh:
             return False, f"Falha na linha 'sh_dados': {e_sh}\n\n{traceback.format_exc()}"
         try:        
@@ -312,14 +321,35 @@ def sincronizar_tabelas_entidades(is_initial=False):
         tabelas_lidas = {}
         # 5. Testando a leitura da lista de abas da planilha
         try:
-            lista_abas = sh_dados.worksheets()
-            for ws in lista_abas:
+            import time
+            lista_abas = None
+            for tentativa in range(3):
                 try:
-                    dados = ws.get_all_records() 
-                    if dados: 
-                        tabelas_lidas[ws.title] = pd.DataFrame(dados) 
+                    lista_abas = sh_dados.worksheets()
+                    break
                 except Exception:
-                    pass # Ignora abas individuais vazias se o resto puder ser lido
+                    if tentativa < 2:
+                        time.sleep(2)
+                        continue
+                    raise
+
+            if lista_abas:
+                for ws in lista_abas:
+                    try:
+                        dados = None
+                        for t_dados in range(3):
+                            try:
+                                dados = ws.get_all_records()
+                                break
+                            except Exception:
+                                if t_dados < 2:
+                                    time.sleep(1)
+                                    continue
+                                raise
+                        if dados: 
+                            tabelas_lidas[ws.title] = pd.DataFrame(dados) 
+                    except Exception:
+                        pass # Ignora abas individuais vazias se o resto puder ser lido
         
         except Exception as e_lista:
         
