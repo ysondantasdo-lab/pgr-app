@@ -1540,24 +1540,25 @@ if aba_selecionada == "Relatório Completo":
                         # Injeta a variável gerada no dicionário de parâmetros
                         parametros['linhas_assinatura'] = linhas_assinatura
                         # Renderiza o documento usando a lógica padrão e universal do Jinja2
-                    try:
-                        doc.render(parametros)
-                    except jinja2.exceptions.TemplateSyntaxError as e:
-                        st.error(f"❌ Erro de Sintaxe no Template: {e}")
+                        try:
+                            doc.render(parametros)
+                        except jinja2.exceptions.TemplateSyntaxError as e:
+                            st.error(f"❌ Erro de Sintaxe no Template: {e}")
     
-                        # Se o erro trouxer a fonte do código, mostramos as linhas próximas
-                        if e.source:
-                            linhas = e.source.splitlines()
-                            # Seu erro aponta para a linha 57 (line 57, in template)
-                            linha_erro = e.lineno if e.lineno else 57 
+                            # Se o erro trouxer a fonte do código, mostramos as linhas próximas
+                            if e.source:
+                                linhas = e.source.splitlines()
+                                # Seu erro aponta para a linha 57 (line 57, in template)
+                                linha_erro = e.lineno if e.lineno else 57 
         
-                            inicio = max(0, linha_erro - 3)
-                            fim = min(len(linhas), linha_erro + 4)
+                                inicio = max(0, linha_erro - 3)
+                                fim = min(len(linhas), linha_erro + 4)
         
-                            st.subheader("Trecho do XML com erro:")
-                            for i in range(inicio, fim):
-                                prefixo = "➡️ " if i + 1 == linha_erro else "   "
-                                st.code(f"{prefixo} Linha {i+1}: {linhas[i]}")
+                                st.subheader("Trecho do XML com erro:")
+                                for i in range(inicio, fim):
+                                    prefixo = "➡️ " if i + 1 == linha_erro else "   "
+                                    st.code(f"{prefixo} Linha {i+1}: {linhas[i]}")
+                            raise e
                         doc.save(docx_out)
                         # 2. Executa a conversão do Word (.docx) para PDF via LibreOffice Headless
                         comando = ['soffice', '--headless', '--convert-to', 'pdf', '--outdir', '/tmp', docx_out]
