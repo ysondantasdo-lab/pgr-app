@@ -1564,7 +1564,7 @@ if aba_selecionada == "Relatório Completo":
                         
                         # EXIBE O DIAGNÓSTICO COMPLETO NA TELA DO STREAMLIT:
                         st.markdown("### 🔍 Rastreamento Detalhado do Erro (Traceback):")
-                        st.code(traceback.format_exc(), language="python"
+                        st.code(traceback.format_exc(), language="python")
                         st.info("Dica: Com o relatório do Traceback acima, procure por linhas que mencionem 'Jinja2' ou 'TemplateSyntaxError' para ver exatamente a tag culpada.")
                         
                     finally:
