@@ -1533,13 +1533,16 @@ if aba_selecionada == "Relatório Completo":
 
 
                     # --- ENTRADA DO NOVO MOTOR DOCXTPL COM TRATAMENTO DE ERROS ALINHADO ---
+                                      
                     try:
-                        # 1. Abre o arquivo Word, processa o dicionário 'parametros' e salva o resultado
+                        # 1. Abre o arquivo Word, inicializa o motor de tabelas e processa os dados
                         doc = DocxTemplate(template_path)
-                        
+                        doc.init_docx_elements() # <-- ESTA LINHA SALVA O SEU MOTOR (Ativa tr_for, tr_endfor, etc.)
+    
                         parametros['linhas_assinatura'] = linhas_assinatura
 
                         doc.render(parametros)
+
                         doc.save(docx_out)
 
                         # 2. Executa a conversão do Word (.docx) para PDF via LibreOffice Headless
