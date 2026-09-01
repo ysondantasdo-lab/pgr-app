@@ -1562,6 +1562,11 @@ if aba_selecionada == "Relatório Completo":
                         st.error("⚠️ **Erro de Processamento no Documento:** Não foi possível aplicar os dados ao modelo Word.")
                         st.markdown(f"Detalhes do erro técnico: `{str(docx_err)}`")
                         
+                        # EXIBE O DIAGNÓSTICO COMPLETO NA TELA DO STREAMLIT:
+                        st.markdown("### 🔍 Rastreamento Detalhado do Erro (Traceback):")
+                        st.code(traceback.format_exc(), language="python"
+                        st.info("Dica: Com o relatório do Traceback acima, procure por linhas que mencionem 'Jinja2' ou 'TemplateSyntaxError' para ver exatamente a tag culpada.")
+                        
                     finally:
                         # Limpeza imediata de todos os arquivos temporários criados nesta execução
                         for arquivo in [template_path, docx_out, pdf_path]:
