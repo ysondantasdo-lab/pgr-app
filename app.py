@@ -1377,9 +1377,17 @@ if aba_selecionada == "Relatório Completo":
     responsaveis_assign = st.multiselect("Selecione quem fará a ASSINATURA final no relatório:", edited_sesmt["nome"].tolist())
 
     resps_dict = edited_sesmt[edited_sesmt["nome"].isin(responsaveis_assign)].to_dict(orient="records")
+    
+    # Esta linha que você já fez está perfeita, apenas mantemos ela visível globalmente/no escopo:
     linhas_assinatura = [resps_dict[i:i + 2] for i in range(0, len(resps_dict), 2)]
     
+    # GARANTIA: Adicione esta linha para inicializar 'parametros' caso ele ainda não exista neste ponto do script
+    if 'parametros' not in locals():
+        parametros = {}
+    parametros['linhas_assinatura'] = linhas_assinatura
+    
     st.markdown("---")
+
     try:
         df_sec = load_tabela("Secretarias")
         all_secretarias = df_sec["Nome do Órgão"].tolist() if not df_sec.empty else []
