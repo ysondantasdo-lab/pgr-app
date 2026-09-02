@@ -29,7 +29,7 @@ import docx
 
 st.write(f"docxtpl: {docxtpl.__version__}")
 st.write(f"jinja2: {jinja2.__version__}")
-st.write(f"python-docx: {docx.__version__}"
+st.write(f"python-docx: {docx.__version__}")
 
 # FUNÇÃO PARA VERIFICAR ONDE ESTÁ ERRO DE PLACEHOLDER NO TEMPLATE
 def mapear_tags_tabela(arquivo_bytes):
