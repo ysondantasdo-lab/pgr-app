@@ -1538,8 +1538,10 @@ if aba_selecionada == "Relatório Completo":
                         # Injeta a variável gerada no dicionário de parâmetros
                         parametros['linhas_assinatura'] = linhas_assinatura
 
+                        doc.patch_xml_tags()
+
                         doc.init_docx()
-                        ambiente_compativel = doc.jinja_env
+                        ambiente_compativel = doc.get_jinja_env()
     
                         # Renderiza o documento usando a lógica padrão e universal do Jinja2
                         try:
