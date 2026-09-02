@@ -1538,7 +1538,7 @@ if aba_selecionada == "Relatório Completo":
                         # Injeta a variável gerada no dicionário de parâmetros
                         parametros['linhas_assinatura'] = linhas_assinatura
 
-                        doc.patch_xml_tags()
+                        #doc.patch_xml_tags() ----- ERRO ENCONTRADO TAG
 
                         doc.init_docx()
                         ambiente_compativel = doc.get_jinja_env()
