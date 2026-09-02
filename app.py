@@ -27,6 +27,10 @@ from docxtpl import DocxTemplate
 
 import docx
 
+st.write(f"docxtpl: {docxtpl.__version__}")
+st.write(f"jinja2: {jinja2.__version__}")
+st.write(f"python-docx: {docx.__version__}"
+
 # FUNÇÃO PARA VERIFICAR ONDE ESTÁ ERRO DE PLACEHOLDER NO TEMPLATE
 def mapear_tags_tabela(arquivo_bytes):
     # Garante que a leitura comece do início do arquivo na memória
@@ -1538,11 +1542,6 @@ if aba_selecionada == "Relatório Completo":
                         # Injeta a variável gerada no dicionário de parâmetros
                         parametros['linhas_assinatura'] = linhas_assinatura
 
-                        #doc.patch_xml_tags() ----- ERRO ENCONTRADO TEMPLATE TAG
-
-                        doc.init_docx()
-                        #ambiente_compativel = doc.get_jinja_env() --- ERRO ENCONTRADO TEMPLATE TAG
-    
                         # Renderiza o documento usando a lógica padrão e universal do Jinja2
                         try:
                             doc.render(parametros)
