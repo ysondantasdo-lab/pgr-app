@@ -1541,7 +1541,7 @@ if aba_selecionada == "Relatório Completo":
                         #doc.patch_xml_tags() ----- ERRO ENCONTRADO TAG
 
                         doc.init_docx()
-                        ambiente_compativel = doc.get_jinja_env()
+                        #ambiente_compativel = doc.get_jinja_env() --- ERRO TEMPLATE TAG
     
                         # Renderiza o documento usando a lógica padrão e universal do Jinja2
                         try:
