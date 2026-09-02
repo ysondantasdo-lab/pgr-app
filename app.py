@@ -1549,7 +1549,7 @@ if aba_selecionada == "Relatório Completo":
                             
                             # Se o erro trouxer a fonte do código, mostramos as linhas próximas
                             fonte_xml = getattr(e, 'source', None)
-                            if fonte_xml
+                            if fonte_xml:
                                 linhas = fonte_xml.splitlines()
                                 # Seu erro aponta para a linha 57 (line 57, in template)
                                 linha_erro = e.lineno if e.lineno else 57 
