@@ -1537,10 +1537,10 @@ if aba_selecionada == "Relatório Completo":
                         doc = DocxTemplate(template_path)
                         # Injeta a variável gerada no dicionário de parâmetros
                         parametros['linhas_assinatura'] = linhas_assinatura
-                        ambiente_jinja = jinja2.Environment(template_class=SubSetTemplate)
+                        
                         # Renderiza o documento usando a lógica padrão e universal do Jinja2
                         try:
-                            doc.render(parametros)
+                            doc.render(parametros, doc.get_docx().jinja_env)
                         except jinja2.exceptions.TemplateSyntaxError as e:
                             st.error(f"❌ Erro de Sintaxe no Template: {e}")
                             st.warning(f"**Mensagem do erro:** {e.message}")
