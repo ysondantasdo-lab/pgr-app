@@ -1540,7 +1540,7 @@ if aba_selecionada == "Relatório Completo":
                         
                         # Renderiza o documento usando a lógica padrão e universal do Jinja2
                         try:
-                            doc.render(parametros, doc.get_docx().jinja_env)
+                            doc.render(parametros, doc.jinja_env)
                         except jinja2.exceptions.TemplateSyntaxError as e:
                             st.error(f"❌ Erro de Sintaxe no Template: {e}")
                             st.warning(f"**Mensagem do erro:** {e.message}")
