@@ -1402,7 +1402,7 @@ if aba_selecionada == "Relatório Completo":
     sec_selecionada_relatorio = st.selectbox("Selecione o Entidade a emitir o Relatório PGR PDF:", all_secretarias)
 
     if st.session_state["usuario_perfil"] == "Admin":
-        if st.button("📄 GERAR RELATÓRIO PGR OFICIAL (PDF/LibreOffice)"):
+        if st.button("📄 GERAR RELATÓRIO PGR OFICIAL (PDF/WORD)"):
             with st.spinner("Processando Integração Automática DOCX-PDF via motor DocxTemplate..."):
                 
                     sec_dados = df_sec[df_sec["Nome do Órgão"] == sec_selecionada_relatorio].iloc[0]
