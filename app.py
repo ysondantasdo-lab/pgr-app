@@ -15,7 +15,7 @@ from google import genai
 from pydantic import BaseModel, Field
 from typing import List
 import unicodedata  # Certifique-se de importar no topo do arquivo
-
+import time
 import traceback
 import sys
 import zipfile
@@ -322,7 +322,7 @@ if st.session_state["usuario_perfil"] == "Admin":
 def sincronizar_tabelas_entidades(is_initial=False):
     try: 
         try:
-            import time
+            
             for tentativa in range(3):
                 try:
                     sh_dados = gc.open_by_key(DADOS_SHEET_ID)
@@ -1382,8 +1382,9 @@ if aba_selecionada == "Relatório Completo":
     linhas_assinatura = [resps_dict[i:i + 2] for i in range(0, len(resps_dict), 2)]
     
     # GARANTIA: Adicione esta linha para inicializar 'parametros' caso ele ainda não exista neste ponto do script
-    if 'parametros' not in locals():
-        parametros = {}
+    if 'parametros' not in iters if not 'parametros' in globals() and not 'parametros' in locals():
+    parametros = {}
+    
     parametros['linhas_assinatura'] = linhas_assinatura
     
     st.markdown("---")
@@ -1537,10 +1538,16 @@ if aba_selecionada == "Relatório Completo":
                             doc.render(parametros)
                         except jinja2.exceptions.TemplateSyntaxError as e:
                             st.error(f"❌ Erro de Sintaxe no Template: {e}")
-    
+                            st.warning(f"**Mensagem do erro:** {e.message}")
+                            if e.lineno:
+                                st.info(f"**Localização aproximada:** Linha {e.lineno} do XML interno do documento.")
+                            else:
+                                st.info("Verifique se todas as tags `{{ ... }}` e `{% ... %}` no Word foram abertas e fechadas corretamente.")
+                            
                             # Se o erro trouxer a fonte do código, mostramos as linhas próximas
-                            if e.source:
-                                linhas = e.source.splitlines()
+                            fonte_xml = getattr(e, 'source', None)
+                            if fonte_xml
+                                linhas = fonte_xml.splitlines()
                                 # Seu erro aponta para a linha 57 (line 57, in template)
                                 linha_erro = e.lineno if e.lineno else 57 
         
