@@ -1382,8 +1382,11 @@ if aba_selecionada == "Relatório Completo":
     linhas_assinatura = [resps_dict[i:i + 2] for i in range(0, len(resps_dict), 2)]
     
     # GARANTIA: Adicione esta linha para inicializar 'parametros' caso ele ainda não exista neste ponto do script
-    if 'parametros' not in iters if not 'parametros' in globals() and not 'parametros' in locals():
-    parametros = {}
+    # Se a variável 'parametros' não existir no código, ela é criada vazia.
+    # Se ela já existir, o Python ignora e mantém os dados que já estavam nela.
+    if 'parametros' not in locals() and 'parametros' not in globals():
+        parametros = {}
+
     
     parametros['linhas_assinatura'] = linhas_assinatura
     
