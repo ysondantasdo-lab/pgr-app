@@ -24,7 +24,7 @@ import re
 import shutil
 import time 
 from docxtpl import DocxTemplate
-from docxtpl.template import SubSetTemplate
+
 import docx
 
 # FUNÇÃO PARA VERIFICAR ONDE ESTÁ ERRO DE PLACEHOLDER NO TEMPLATE
