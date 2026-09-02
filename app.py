@@ -1507,31 +1507,24 @@ if aba_selecionada == "Relatório Completo":
                     template_path = f"/tmp/base_{id_unico}.docx"
                     docx_out = f"/tmp/relatorio_{id_unico}.docx"
                     pdf_path = f"/tmp/relatorio_{id_unico}.pdf"
-
-                    # Baixar DOCX pelo ID da API
+                    
+                    # 2. Configura e gerencia o download de forma segura usando um arquivo em disco
                     request = drive_service.files().get_media(fileId=DOCX_TEMPLATE_ID)
-                    conteudo_docx = request.execute()
+               
+                    # Abrimos o arquivo local diretamente em modo de escrita binária ('wb')
+                    with open(template_path, "wb") as f_out:
+                        downloader = MediaIoBaseDownload(f_out, request)
+                        done = False
+                        while done is False:
+                            status, done = downloader.next_chunk()
 
-                    # 📍 ADICIONE ESTA LINHA EXATAMENTE AQUI:
-                    mapear_tags_tabela(io.BytesIO(conteudo_docx)) 
-
-                    # === Configurações de cabeçalho para evitar cache ===
-                    request.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-                    request.headers['Pragma'] = 'no-cache'
-                    request.headers['Expires'] = '0'
-                
-                    fh = io.BytesIO()
-                    downloader = MediaIoBaseDownload(fh, request)
-                    done = False
-                    while done is False:
-                        status, done = downloader.next_chunk()
-
-                    # Só grava o arquivo depois que o download estiver 100% completo
-                    with open(template_path, "wb") as f:
-                        f.write(fh.getvalue())
-
-
-
+                    # 3. O arquivo já está 100% gravado no disco em 'template_path'.
+                    # Agora sim, abrimos o arquivo local para mapear as tags com segurança.
+                    with open(template_path, "rb") as f_in:
+                        conteudo_docx = f_in.read()
+                        # Enviamos os bytes para a sua função de mapeamento
+                        mapear_tags_tabela(io.BytesIO(conteudo_docx))
+                                        
                     # --- ENTRADA DO NOVO MOTOR DOCXTPL COM TRATAMENTO DE ERROS ALINHADO ---
                                       
                     try:
