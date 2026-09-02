@@ -1537,8 +1537,7 @@ if aba_selecionada == "Relatório Completo":
                         doc = DocxTemplate(template_path)
                         # Injeta a variável gerada no dicionário de parâmetros
                         parametros['linhas_assinatura'] = linhas_assinatura
-                        # Criamos o ambiente forçando o uso da classe de Template do docxtpl que reconhece o 'tr'
-                        ambiente_jinja = jinja2.Environment(template_class=SubSetTemplate)
+                        
                         # Renderiza o documento usando a lógica padrão e universal do Jinja2
                         try:
                             doc.render(parametros)
