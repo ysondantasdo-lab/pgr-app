@@ -6,8 +6,8 @@ google-api-python-client
 google-auth
 secretary==0.2.19
 openpyxl
-jinja2==3.0.3
-markupsafe==2.0.1
+jinja2==3.1.2
+markupsafe==2.1.1
 google-genai
 docxtpl==0.16.8
 python-docx==1.1.2
