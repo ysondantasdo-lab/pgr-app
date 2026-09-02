@@ -1533,7 +1533,18 @@ if aba_selecionada == "Relatório Completo":
                         conteudo_docx = f_in.read()
                         # Enviamos os bytes para a sua função de mapeamento
                         mapear_tags_tabela(io.BytesIO(conteudo_docx))
-                    
+
+                    with zipfile.ZipFile(template_path) as z:
+                        xml = z.read("word/document.xml").decode("utf-8")
+
+                    # Procura a região perto de "tr" dentro de tags jinja
+                    posicao = xml.find("tr for")
+                    if posicao == -1:
+                        posicao = xml.find(">tr<")  # caso esteja fragmentado em runs
+                    print("Trecho bruto do XML ao redor da tag:\n")
+                    print(xml[max(0, posicao-300):posicao+300])
+
+                
                     # --- CONSERTAR TAGS QUEBRADAS                    
                     def consertar_tags_quebradas(documento):
                         """
