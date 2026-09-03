@@ -1516,6 +1516,7 @@ if aba_selecionada == "Relatório Completo":
                     template_path = f"/tmp/base_{id_unico}.docx"
                     docx_out = f"/tmp/relatorio_{id_unico}.docx"
                     pdf_path = f"/tmp/relatorio_{id_unico}.pdf"
+                    perfil_tmp = f"/tmp/perfil_{id_unico}"
                     
                     # 2. Configura e gerencia o download de forma segura usando um arquivo em disco
                     request = drive_service.files().get_media(fileId=DOCX_TEMPLATE_ID)
