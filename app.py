@@ -1613,9 +1613,22 @@ if aba_selecionada == "Relatório Completo":
                                     st.code(f"{prefixo} Linha {i+1}: {linhas[i]}")
                             raise e
                         doc.save(docx_out)
+                        
                         # 2. Executa a conversão do Word (.docx) para PDF via LibreOffice Headless
-                        comando = ['soffice', '--headless', '--convert-to', 'pdf', '--outdir', '/tmp', docx_out]
-                        subprocess.run(comando, check=True)
+                        comando = [
+                            'soffice', '--headless',
+                            f'-env:UserInstallation=file://{perfil_tmp}',
+                            '--convert-to', 'pdf', '--outdir', '/tmp', docx_out
+                        ]
+                        try:
+                            subprocess.run(comando, check=True, timeout=90)
+                        except subprocess.TimeoutExpired:
+                            st.error("A conversão para PDF demorou demais e foi cancelada (timeout). Tente novamente.")
+                            st.stop()
+                        except subprocess.CalledProcessError as e:
+                            st.error(f"Erro ao converter o documento para PDF: {e}")
+                            st.stop()
+                        
                         # 3. Lê o arquivo PDF gerado para disponibilizar ao usuário
                         with open(pdf_path, "rb") as pdf_file:
                             pdf_bytes = pdf_file.read()
