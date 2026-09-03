@@ -1544,37 +1544,7 @@ if aba_selecionada == "Relatório Completo":
                     print("Trecho bruto do XML ao redor da tag:\n")
                     print(xml[max(0, posicao-300):posicao+300])
 
-                
-                    # --- CONSERTAR TAGS QUEBRADAS                    
-                    def consertar_tags_quebradas(documento):
-                        """
-                        Junta em um único 'run' qualquer parágrafo/célula que contenha uma
-                        tag Jinja2 ({{ }}, {% %} ou {# #}), evitando que o Word tenha
-                        quebrado a tag em vários runs e o docxtpl deixe de reconhecê-la.
-                        """
-                        def processar_paragrafo(paragrafo):
-                            texto_completo = paragrafo.text
-                            if ('{{' in texto_completo or '{%' in texto_completo
-                                    or '{#' in texto_completo) and len(paragrafo.runs) > 1:
-                                paragrafo.runs[0].text = texto_completo
-                                for run in paragrafo.runs[1:]:
-                                    run.text = ''
-
-                        for paragrafo in documento.paragraphs:
-                            processar_paragrafo(paragrafo)
-
-                        for tabela in documento.tables:
-                            for linha in tabela.rows:
-                                for celula in linha.cells:
-                                    for paragrafo in celula.paragraphs:
-                                        processar_paragrafo(paragrafo)
-
-                        for secao in documento.sections:
-                            for paragrafo in secao.header.paragraphs:
-                                processar_paragrafo(paragrafo)
-                            for paragrafo in secao.footer.paragraphs:
-                                processar_paragrafo(paragrafo)
-            
+                                    
                     # --- ENTRADA DO NOVO MOTOR DOCXTPL COM TRATAMENTO DE ERROS ALINHADO ---
                                       
                     try:
@@ -1582,10 +1552,7 @@ if aba_selecionada == "Relatório Completo":
                         doc = DocxTemplate(template_path)
                         # Injeta a variável gerada no dicionário de parâmetros
                         parametros['linhas_assinatura'] = linhas_assinatura
-
-                        # Corrige tags que o Word possa ter quebrado em múltiplos runs
-                        consertar_tags_quebradas(doc.get_docx())
-
+                        
                         # Renderiza o documento usando a lógica padrão e universal do Jinja2
                         try:
                             doc.render(parametros)
@@ -1653,7 +1620,7 @@ if aba_selecionada == "Relatório Completo":
                         
                     finally:
                         # Limpeza imediata de todos os arquivos temporários criados nesta execução
-                        for arquivo in [template_path, docx_out, pdf_path]:
+                        for arquivo in [template_path, docx_out]:
                             if os.path.exists(arquivo):
                                 os.remove(arquivo)
 
