@@ -1084,7 +1084,7 @@ if aba_selecionada == "Cadastro Interativo":
                             save_tabela(nome_tabela, df_estado_anterior)
                         except Exception:
                             pass
-                st.error(f"Erro geral no processamento ou salvamento: {ex}\n\n{traceback.format_exc()}")
+                st.error(f"Erro geral no processamento ou salvamento: {erro_gravacao}\n\n{traceback.format_exc()}")
 
             except Exception as ex:
                 st.error(f"Erro ao preparar ou processar dados: {ex}")
