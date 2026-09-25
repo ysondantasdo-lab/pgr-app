@@ -72,6 +72,7 @@ class RiscoEstruturado(BaseModel):
     danos_saude: str = Field(description="Ex: Perda auditiva, irritação respiratória")
     medida_proposta: str = Field(description="Ação sugerida para mitigar o risco")
     tipo_medida: str = Field(description="Deve ser exatamente um: EPC, EPI, Administrativa/Organizacional ou Médica")
+    classificacao_risco: str = Field(description="Classificação do risco ambiental. Deve ser exatamente um destes: Físico, Químico, Biológico, Ergonômico ou Acidente")
 
 class SugestaoPGR(BaseModel):
     riscos: List[RiscoEstruturado]
@@ -683,7 +684,7 @@ if aba_selecionada == "Cadastro Interativo":
                 for tentativa in range(tentativas_maximas):               
                     try:
                         client = genai.Client(api_key=st.secrets["auth"]["GEMINI_API_KEY"])
-                        prompt = f"Atue como um Engenheiro de Segurança do Trabalho Sênior. Analise o cargo '{cargo_selecionado}' exercendo a função de '{funcao_text}' que realiza a atividade: '{desc_atv}'. Gere uma lista de riscos ambientais previsíveis seguindo as diretrizes da NR-01."
+                        prompt = f"Atue como um Engenheiro de Segurança do Trabalho Sênior. Analise o cargo '{cargo_selecionado}' exercendo a função de '{funcao_text}' que realiza a atividade: '{desc_atv}'. Gere uma lista de riscos ambientais previsíveis seguindo as diretrizes da NR-01. Para cada risco, classifique-o obrigatoriamente em uma das 5 categorias da Segurança do Trabalho: Físico, Químico, Biológico, Ergonômico ou Acidente."
                         response = client.models.generate_content(
                             model='gemini-2.5-flash',
                             contents=prompt,
@@ -723,7 +724,7 @@ if aba_selecionada == "Cadastro Interativo":
                 if st.button("Usar estes dados no formulário abaixo", key=f"btn_ia_{idx_ia}"):
                     fk_atual = st.session_state.get("fk", 0)
     
-                    st.session_state[f"risco_{fk_atual}"] = item_ia.fator_risco # <--- ADICIONADO AQUI
+                    st.session_state[f"risco_{fk_atual}"] = f"{item_ia.classificacao_risco} - {item_ia.fator_risco}"
                     st.session_state[f"fator_{fk_atual}"] = item_ia.fator_risco
                     st.session_state[f"fonte_{fk_atual}"] = item_ia.fonte_geradora
                     st.session_state[f"danos_{fk_atual}"] = item_ia.danos_saude
