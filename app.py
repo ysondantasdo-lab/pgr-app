@@ -724,7 +724,7 @@ if aba_selecionada == "Cadastro Interativo":
                 if st.button("Usar estes dados no formulário abaixo", key=f"btn_ia_{idx_ia}"):
                     fk_atual = st.session_state.get("fk", 0)
     
-                    st.session_state[f"risco_{fk_atual}"] = f"{item_ia.classificacao_risco} - {item_ia.fator_risco}"
+                    st.session_state[f"risco_{fk_atual}"] = item_ia.classificacao_risco
                     st.session_state[f"fator_{fk_atual}"] = item_ia.fator_risco
                     st.session_state[f"fonte_{fk_atual}"] = item_ia.fonte_geradora
                     st.session_state[f"danos_{fk_atual}"] = item_ia.danos_saude
